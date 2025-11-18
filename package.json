@@ -16,14 +16,13 @@
         "vitest": "^4.0.4"
     },
     "dependencies": {
-        "@reactflow/background": "^11.3.14",
-        "@reactflow/controls": "^11.2.14",
-        "@reactflow/core": "^11.11.4",
-        "@reactflow/minimap": "^11.7.14",
         "@vitejs/plugin-react": "^5.1.0",
+        "@xyflow/react": "^12.9.3",
+        "clsx": "^2.1.1",
+        "lucide-react": "^0.554.0",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
-        "reactflow": "^11.11.4",
+        "tailwind-merge": "^3.4.0",
         "zustand": "^5.0.8"
     }
 }

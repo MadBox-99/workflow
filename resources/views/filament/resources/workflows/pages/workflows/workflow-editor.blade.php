@@ -1,4 +1,5 @@
 <x-filament-panels::page>
+
     <div class="space-y-4">
         <div class="bg-white p-4 rounded-lg shadow">
             <h2 class="text-xl font-bold mb-4">Workflow Visual Editor</h2>
@@ -6,11 +7,11 @@
                 Használja a teljes funkcionalitású React Flow editort a workflow szerkesztéséhez:
             </p>
             <div class="flex gap-3">
-                <a href="{{ url('/admin?workflow=' . $record->id) }}"
-                    target="_blank"
+                <a href="{{ url('/admin?workflow=' . $record->id) }}" target="_blank"
                     class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 shadow-md transition">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                     Workflow Editor Megnyitása
                 </a>

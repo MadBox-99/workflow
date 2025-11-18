@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { MarkerType, ReactFlowProvider } from '@xyflow/react';
 import WorkflowEditor from './WorkflowEditor';
 import axios from 'axios';
 
@@ -11,6 +12,7 @@ const AdminApp = () => {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
+        console.log('AdminApp mounted');
         fetchWorkflows();
 
         // Check URL for workflow ID
@@ -23,8 +25,10 @@ const AdminApp = () => {
 
     const fetchWorkflows = async () => {
         try {
+            console.log('Fetching workflows...');
             setLoading(true);
             const response = await axios.get('/api/workflows');
+            console.log('Workflows fetched:', response.data);
             setWorkflows(response.data);
         } catch (error) {
             console.error('Error fetching workflows:', error);
@@ -135,20 +139,32 @@ const AdminApp = () => {
             label: node.data?.label || node.label,
             type: node.data?.type || node.type || 'action',
         },
+        style: node.style || {
+            width: 180,
+            height: 70,
+        },
     })) || [];
 
     const initialEdges = selectedWorkflow?.connections?.map((conn) => ({
         id: conn.connection_id,
+        type: 'floating',
         source: conn.source_node_id,
         target: conn.target_node_id,
         sourceHandle: conn.source_handle,
         targetHandle: conn.target_handle,
+        markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 20,
+            height: 20,
+        },
     })) || [];
+
+    console.log('AdminApp rendering, workflows:', workflows.length, 'isCreating:', isCreating);
 
     return (
         <div className="container mx-auto p-6">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold">Workflow Admin</h1>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Workflow Admin</h1>
                 <button
                     onClick={handleNewWorkflow}
                     className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -160,27 +176,27 @@ const AdminApp = () => {
 
             {isCreating ? (
                 <div className="space-y-4">
-                    <div className="bg-white p-4 rounded-lg shadow">
-                        <h2 className="text-xl font-bold mb-4">
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+                        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
                             {selectedWorkflow ? 'Edit Workflow' : 'Create New Workflow'}
                         </h2>
                         <div className="space-y-3">
                             <div>
-                                <label className="block text-sm font-medium mb-1">Name</label>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Name</label>
                                 <input
                                     type="text"
                                     value={workflowName}
                                     onChange={(e) => setWorkflowName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                     placeholder="Workflow name"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Description</label>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Description</label>
                                 <textarea
                                     value={workflowDescription}
                                     onChange={(e) => setWorkflowDescription(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                     placeholder="Workflow description"
                                     rows="3"
                                 />
@@ -188,11 +204,13 @@ const AdminApp = () => {
                         </div>
                     </div>
 
-                    <WorkflowEditor
-                        initialNodes={initialNodes}
-                        initialEdges={initialEdges}
-                        onSave={handleSaveWorkflow}
-                    />
+                    <ReactFlowProvider>
+                        <WorkflowEditor
+                            initialNodes={initialNodes}
+                            initialEdges={initialEdges}
+                            onSave={handleSaveWorkflow}
+                        />
+                    </ReactFlowProvider>
 
                     <div className="flex gap-2">
                         <button
@@ -207,31 +225,33 @@ const AdminApp = () => {
                         >
                             Close Editor
                         </button>
-                        <p className="text-sm text-gray-500 flex items-center">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
                             Workflow will stay open after saving
                         </p>
                     </div>
                 </div>
             ) : (
-                <div className="bg-white rounded-lg shadow">
-                    <div className="p-4 border-b">
-                        <h2 className="text-xl font-bold">Workflows</h2>
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+                    <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Workflows</h2>
                     </div>
-                    <div className="divide-y">
+                    <div className="divide-y divide-gray-200 dark:divide-gray-700">
                         {loading ? (
-                            <div className="p-8 text-center text-gray-500">Loading...</div>
+                            <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading...</div>
                         ) : workflows.length === 0 ? (
-                            <div className="p-8 text-center text-gray-500">
+                            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                                 No workflows yet. Create one to get started!
                             </div>
                         ) : (
                             workflows.map((workflow) => (
-                                <div key={workflow.id} className="p-4 flex justify-between items-center hover:bg-gray-50">
+                                <div key={workflow.id} className="p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <div>
-                                        <h3 className="font-semibold">{workflow.name}</h3>
-                                        <p className="text-sm text-gray-600">{workflow.description}</p>
+                                        <h3 className="font-semibold text-gray-900 dark:text-white">{workflow.name}</h3>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">{workflow.description}</p>
                                         <span className={`inline-block mt-1 px-2 py-1 text-xs rounded ${
-                                            workflow.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                            workflow.is_active
+                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
                                         }`}>
                                             {workflow.is_active ? 'Active' : 'Inactive'}
                                         </span>
