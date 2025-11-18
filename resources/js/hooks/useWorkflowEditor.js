@@ -1,6 +1,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useNodesState, useEdgesState, addEdge, useReactFlow } from '@xyflow/react';
 import { nodeTypeConfig } from '@/constants/workflowConstants';
+import axios from 'axios';
 
 export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
     const { screenToFlowPosition } = useReactFlow();
@@ -14,6 +15,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
     const [colorMode, setColorMode] = useState(
         document.documentElement.classList.contains('dark') ? 'dark' : 'light'
     );
+    const [snapToGrid, setSnapToGrid] = useState(true);
 
     const handleNodeTrigger = useCallback(async (nodeId, nodeData) => {
         console.log('Node trigger event:', nodeId, nodeData);
@@ -31,10 +33,48 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         );
 
         try {
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-            const isSuccess = Math.random() > 0.3;
+            // Check if this is an action node with API configuration
+            if (nodeData.type === 'action' && nodeData.config?.url) {
+                const { method = 'POST', url, requestBody = {}, headers = {} } = nodeData.config;
 
-            if (isSuccess) {
+                console.log(`Making ${method} request to ${url}`);
+
+                const config = {
+                    method: method.toLowerCase(),
+                    url: url,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...headers,
+                    },
+                };
+
+                // Add data for POST, PUT, PATCH requests
+                if (['post', 'put', 'patch'].includes(method.toLowerCase())) {
+                    config.data = requestBody;
+                }
+
+                const response = await axios(config);
+
+                setNodes((nds) =>
+                    nds.map((node) => {
+                        if (node.id === nodeId) {
+                            return {
+                                ...node,
+                                data: {
+                                    ...node.data,
+                                    status: 'success',
+                                    lastResponse: response.data,
+                                },
+                            };
+                        }
+                        return node;
+                    })
+                );
+                console.log('Action executed successfully:', response.data);
+            } else {
+                // Fallback for non-action nodes or action nodes without URL
+                await new Promise((resolve) => setTimeout(resolve, 1000));
                 setNodes((nds) =>
                     nds.map((node) => {
                         if (node.id === nodeId) {
@@ -46,9 +86,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                         return node;
                     })
                 );
-                console.log('Action executed successfully');
-            } else {
-                throw new Error('Action failed');
+                console.log('Node triggered (no API call configured)');
             }
         } catch (error) {
             setNodes((nds) =>
@@ -56,13 +94,17 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                     if (node.id === nodeId) {
                         return {
                             ...node,
-                            data: { ...node.data, status: 'error' },
+                            data: {
+                                ...node.data,
+                                status: 'error',
+                                lastError: error.response?.data || error.message,
+                            },
                         };
                     }
                     return node;
                 })
             );
-            console.error('Failed to execute action:', error);
+            console.error('Failed to execute action:', error.response?.data || error.message);
         }
     }, [setNodes]);
 
@@ -285,6 +327,10 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         onSave(workflowData);
     }, [nodes, edges]);
 
+    const toggleSnapToGrid = useCallback(() => {
+        setSnapToGrid((prev) => !prev);
+    }, []);
+
     return {
         nodes,
         edges,
@@ -294,6 +340,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         nodeDescription,
         nodeConfig,
         colorMode,
+        snapToGrid,
         onNodesChange,
         onEdgesChange,
         onConnect,
@@ -312,5 +359,6 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         deleteSelectedEdge,
         deleteNodeConnections,
         handleSave,
+        toggleSnapToGrid,
     };
 };

@@ -4,6 +4,7 @@ export const nodeTypeConfig = {
     start: { label: 'Start', color: '#22c55e', bgColor: '#dcfce7' },
     action: { label: 'Action', color: '#3b82f6', bgColor: '#dbeafe' },
     condition: { label: 'Condition', color: '#eab308', bgColor: '#fef9c3' },
+    constant: { label: 'Constant', color: '#8b5cf6', bgColor: '#ede9fe' },
     end: { label: 'End', color: '#ef4444', bgColor: '#fee2e2' },
 };
 

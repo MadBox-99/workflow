@@ -1,27 +1,14 @@
-import { useState, useEffect } from 'react';
 import { Handle, Position, NodeResizer } from '@xyflow/react';
 import { NodeStatusIndicator } from './node-status-indicator';
+import { useDarkMode } from '@/hooks/useDarkMode';
+import { getNodeTypeStyles } from '@/constants/nodeStyles';
+import NodeTriggerButton from '@/components/node/NodeTriggerButton';
 
 const CustomNode = ({ data, selected, id }) => {
     const nodeType = data.type || 'action';
     const nodeStatus = data.status || 'initial';
     const statusVariant = data.statusVariant || 'border';
-    const [isDark, setIsDark] = useState(
-        document.documentElement.classList.contains('dark')
-    );
-
-    useEffect(() => {
-        const observer = new MutationObserver(() => {
-            setIsDark(document.documentElement.classList.contains('dark'));
-        });
-
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ['class'],
-        });
-
-        return () => observer.disconnect();
-    }, []);
+    const isDark = useDarkMode();
 
     const handleTrigger = (e) => {
         e.stopPropagation();
@@ -30,33 +17,7 @@ const CustomNode = ({ data, selected, id }) => {
         }
     };
 
-    const typeStyles = {
-        start: {
-            bg: isDark ? '#14532d' : '#dcfce7',
-            border: isDark ? '#22c55e' : '#22c55e',
-            icon: '▶',
-            textColor: isDark ? '#86efac' : '#15803d'
-        },
-        action: {
-            bg: isDark ? '#1e3a8a' : '#dbeafe',
-            border: isDark ? '#3b82f6' : '#3b82f6',
-            icon: '⚙',
-            textColor: isDark ? '#93c5fd' : '#1e40af'
-        },
-        condition: {
-            bg: isDark ? '#713f12' : '#fef9c3',
-            border: isDark ? '#eab308' : '#eab308',
-            icon: '?',
-            textColor: isDark ? '#fde047' : '#854d0e'
-        },
-        end: {
-            bg: isDark ? '#7f1d1d' : '#fee2e2',
-            border: isDark ? '#ef4444' : '#ef4444',
-            icon: '◼',
-            textColor: isDark ? '#fca5a5' : '#991b1b'
-        },
-    };
-
+    const typeStyles = getNodeTypeStyles(isDark);
     const style = typeStyles[nodeType] || typeStyles.action;
 
     return (
@@ -90,69 +51,78 @@ const CustomNode = ({ data, selected, id }) => {
                     fontWeight: '500',
                     color: style.textColor,
                     position: 'relative',
-                    boxShadow: selected ? (isDark ? '0 4px 6px -1px rgba(255, 255, 255, 0.1)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)') : 'none',
                 }}
             >
             {/* Top Handles - source overlaid on target so both work from same position */}
-            <Handle
-                type="target"
-                position={Position.Top}
-                id="top-target"
-                style={{
-                    background: style.border,
-                    width: '10px',
-                    height: '10px',
-                    border: `2px solid ${style.bg}`,
-                }}
-            />
-            <Handle
-                type="source"
-                position={Position.Top}
-                id="top-source"
-                style={{
-                    background: style.border,
-                    width: '10px',
-                    height: '10px',
-                    border: `2px solid ${style.bg}`,
-                }}
-            />
+            {nodeType !== 'constant' && (
+                <Handle
+                    type="target"
+                    position={Position.Top}
+                    id="top-target"
+                    style={{
+                        background: style.border,
+                        width: '10px',
+                        height: '10px',
+                        border: `2px solid ${style.bg}`,
+                    }}
+                />
+            )}
+            {nodeType !== 'condition' && (
+                <Handle
+                    type="source"
+                    position={Position.Top}
+                    id="top-source"
+                    style={{
+                        background: style.border,
+                        width: '10px',
+                        height: '10px',
+                        border: `2px solid ${style.bg}`,
+                    }}
+                />
+            )}
 
             {/* Right Handles - source overlaid on target */}
-            <Handle
-                type="target"
-                position={Position.Right}
-                id="right-target"
-                style={{
-                    background: style.border,
-                    width: '10px',
-                    height: '10px',
-                    border: `2px solid ${style.bg}`,
-                }}
-            />
-            <Handle
-                type="source"
-                position={Position.Right}
-                id="right-source"
-                style={{
-                    background: style.border,
-                    width: '10px',
-                    height: '10px',
-                    border: `2px solid ${style.bg}`,
-                }}
-            />
+            {nodeType !== 'constant' && (
+                <Handle
+                    type="target"
+                    position={Position.Right}
+                    id="right-target"
+                    style={{
+                        background: style.border,
+                        width: '10px',
+                        height: '10px',
+                        border: `2px solid ${style.bg}`,
+                    }}
+                />
+            )}
+            {nodeType !== 'condition' && (
+                <Handle
+                    type="source"
+                    position={Position.Right}
+                    id="right-source"
+                    style={{
+                        background: style.border,
+                        width: '10px',
+                        height: '10px',
+                        border: `2px solid ${style.bg}`,
+                    }}
+                />
+            )}
 
             {/* Bottom Handles - source overlaid on target */}
-            <Handle
-                type="target"
-                position={Position.Bottom}
-                id="bottom-target"
-                style={{
-                    background: style.border,
-                    width: '10px',
-                    height: '10px',
-                    border: `2px solid ${style.bg}`,
-                }}
-            />
+            {nodeType !== 'constant' && (
+                <Handle
+                    type="target"
+                    position={Position.Bottom}
+                    id="bottom-target"
+                    style={{
+                        background: style.border,
+                        width: '10px',
+                        height: '10px',
+                        border: `2px solid ${style.bg}`,
+                    }}
+                />
+            )}
             <Handle
                 type="source"
                 position={Position.Bottom}
@@ -166,64 +136,35 @@ const CustomNode = ({ data, selected, id }) => {
             />
 
             {/* Left Handles - source overlaid on target */}
-            <Handle
-                type="target"
-                position={Position.Left}
-                id="left-target"
-                style={{
-                    background: style.border,
-                    width: '10px',
-                    height: '10px',
-                    border: `2px solid ${style.bg}`,
-                }}
-            />
-            <Handle
-                type="source"
-                position={Position.Left}
-                id="left-source"
-                style={{
-                    background: style.border,
-                    width: '10px',
-                    height: '10px',
-                    border: `2px solid ${style.bg}`,
-                }}
-            />
+            {nodeType !== 'constant' && (
+                <Handle
+                    type="target"
+                    position={Position.Left}
+                    id="left-target"
+                    style={{
+                        background: style.border,
+                        width: '10px',
+                        height: '10px',
+                        border: `2px solid ${style.bg}`,
+                    }}
+                />
+            )}
+            {nodeType !== 'condition' && (
+                <Handle
+                    type="source"
+                    position={Position.Left}
+                    id="left-source"
+                    style={{
+                        background: style.border,
+                        width: '10px',
+                        height: '10px',
+                        border: `2px solid ${style.bg}`,
+                    }}
+                />
+            )}
 
             {/* Trigger Button - Top Right Corner */}
-            <button
-                onClick={handleTrigger}
-                style={{
-                    position: 'absolute',
-                    top: '4px',
-                    right: '4px',
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '4px',
-                    border: `1px solid ${style.border}`,
-                    background: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.8)',
-                    color: style.textColor,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '12px',
-                    transition: 'all 0.2s',
-                    zIndex: 10,
-                }}
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.background = style.border;
-                    e.currentTarget.style.color = isDark ? '#000' : '#fff';
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.background = isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.8)';
-                    e.currentTarget.style.color = style.textColor;
-                    e.currentTarget.style.transform = 'scale(1)';
-                }}
-                title="Trigger Event"
-            >
-                ▶
-            </button>
+            <NodeTriggerButton style={style} isDark={isDark} onTrigger={handleTrigger} />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
                 <span style={{ fontSize: '18px' }}>{style.icon}</span>

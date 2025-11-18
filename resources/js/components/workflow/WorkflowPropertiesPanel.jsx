@@ -1,6 +1,8 @@
 import React from 'react';
 import { nodeTypeConfig } from '@/constants/workflowConstants';
 import StartNodeConfig from '../StartNodeConfig';
+import ConstantNodeConfig from '../ConstantNodeConfig';
+import ActionNodeConfig from '../ActionNodeConfig';
 
 const WorkflowPropertiesPanel = ({
     selectedNode,
@@ -71,6 +73,16 @@ const WorkflowPropertiesPanel = ({
 
                     {selectedNode.data.type === 'start' ? (
                         <StartNodeConfig
+                            config={JSON.parse(nodeConfig || '{}')}
+                            onChange={(newConfig) => setNodeConfig(JSON.stringify(newConfig, null, 2))}
+                        />
+                    ) : selectedNode.data.type === 'constant' ? (
+                        <ConstantNodeConfig
+                            config={JSON.parse(nodeConfig || '{}')}
+                            onChange={(newConfig) => setNodeConfig(JSON.stringify(newConfig, null, 2))}
+                        />
+                    ) : selectedNode.data.type === 'action' ? (
+                        <ActionNodeConfig
                             config={JSON.parse(nodeConfig || '{}')}
                             onChange={(newConfig) => setNodeConfig(JSON.stringify(newConfig, null, 2))}
                         />

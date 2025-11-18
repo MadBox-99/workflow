@@ -29,6 +29,7 @@ const WorkflowEditor = ({ initialNodes = [], initialEdges = [], onSave }) => {
         nodeDescription,
         nodeConfig,
         colorMode,
+        snapToGrid,
         onNodesChange,
         onEdgesChange,
         onConnect,
@@ -47,6 +48,7 @@ const WorkflowEditor = ({ initialNodes = [], initialEdges = [], onSave }) => {
         deleteSelectedEdge,
         deleteNodeConnections,
         handleSave,
+        toggleSnapToGrid,
     } = useWorkflowEditor(initialNodes, initialEdges);
 
     return (
@@ -68,12 +70,25 @@ const WorkflowEditor = ({ initialNodes = [], initialEdges = [], onSave }) => {
                     edgeTypes={edgeTypes}
                     defaultEdgeOptions={defaultEdgeOptions}
                     colorMode={colorMode}
+                    snapToGrid={snapToGrid}
+                    snapGrid={[15, 15]}
                     fitView
                 >
                     <Controls />
                     <MiniMap />
                     <Background variant="dots" gap={12} size={1} />
                     <Panel position="top-right" className="flex gap-2">
+                        <button
+                            onClick={toggleSnapToGrid}
+                            className={`px-4 py-2 rounded-lg shadow-lg font-medium transition-all hover:scale-105 ${
+                                snapToGrid
+                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                    : 'bg-gray-400 text-white hover:bg-gray-500'
+                            }`}
+                            title={snapToGrid ? 'Snap to Grid: ON' : 'Snap to Grid: OFF'}
+                        >
+                            {snapToGrid ? '🧲 Grid ON' : '🔓 Free'}
+                        </button>
                         <button
                             onClick={() => handleSave(onSave)}
                             className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 shadow-lg font-medium transition-all hover:scale-105"
