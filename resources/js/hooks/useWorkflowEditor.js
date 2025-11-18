@@ -33,93 +33,122 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         );
 
         try {
-            // Check if this is an action node
-            if (nodeData.type === 'action' && nodeData.config) {
-                const actionType = nodeData.config.actionType || 'apiCall';
+            const nodeType = nodeData.type;
 
-                switch (actionType) {
-                    case 'apiCall':
-                        if (nodeData.config.url) {
-                            const { method = 'POST', url, requestBody = {}, headers = {} } = nodeData.config;
+            // Handle different action node types
+            switch (nodeType) {
+                case 'apiAction':
+                    if (nodeData.config && nodeData.config.url) {
+                        const { method = 'POST', url, requestBody = {}, headers = {} } = nodeData.config;
 
-                            console.log(`[API Call] Making ${method} request to ${url}`);
+                        console.log(`[API Action] Making ${method} request to ${url}`);
 
-                            const config = {
-                                method: method.toLowerCase(),
-                                url: url,
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Accept': 'application/json',
-                                    ...headers,
-                                },
-                            };
+                        const config = {
+                            method: method.toLowerCase(),
+                            url: url,
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                ...headers,
+                            },
+                        };
 
-                            // Add data for POST, PUT, PATCH requests
-                            if (['post', 'put', 'patch'].includes(method.toLowerCase())) {
-                                config.data = requestBody;
+                        // Add data for POST, PUT, PATCH requests
+                        if (['post', 'put', 'patch'].includes(method.toLowerCase())) {
+                            config.data = requestBody;
+                        }
+
+                        const response = await axios(config);
+
+                        setNodes((nds) =>
+                            nds.map((node) => {
+                                if (node.id === nodeId) {
+                                    return {
+                                        ...node,
+                                        data: {
+                                            ...node.data,
+                                            status: 'success',
+                                            lastResponse: response.data,
+                                        },
+                                    };
+                                }
+                                return node;
+                            })
+                        );
+                        console.log('[API Action] Success:', response.data);
+                    } else {
+                        throw new Error('API Action requires a URL');
+                    }
+                    break;
+
+                case 'emailAction':
+                    if (nodeData.config) {
+                        const { template, recipients = [], subject, customData = {} } = nodeData.config;
+
+                        console.log(`[Email Action] Sending email with template: ${template}`);
+                        console.log(`[Email Action] Recipients:`, recipients);
+
+                        // TODO: Implement actual email sending via Laravel backend
+                        // For now, simulate the action
+                        const emailPayload = {
+                            template,
+                            recipients,
+                            subject,
+                            data: customData,
+                        };
+
+                        // Simulate API call to backend
+                        const response = await axios.post('/api/workflows/actions/email', emailPayload);
+
+                        setNodes((nds) =>
+                            nds.map((node) => {
+                                if (node.id === nodeId) {
+                                    return {
+                                        ...node,
+                                        data: {
+                                            ...node.data,
+                                            status: 'success',
+                                            lastResponse: response.data,
+                                        },
+                                    };
+                                }
+                                return node;
+                            })
+                        );
+                        console.log('[Email Action] Success:', response.data);
+                    } else {
+                        throw new Error('Email Action requires configuration');
+                    }
+                    break;
+
+                case 'databaseAction':
+                    console.log('[Database Action] Not yet implemented');
+                    throw new Error('Database action is not yet implemented');
+
+                case 'scriptAction':
+                    console.log('[Script Action] Not yet implemented');
+                    throw new Error('Script action is not yet implemented');
+
+                case 'webhookAction':
+                    console.log('[Webhook Action] Not yet implemented');
+                    throw new Error('Webhook action is not yet implemented');
+
+                default:
+                    // Fallback for non-action nodes (start, condition, constant, end)
+                    console.log(`[${nodeType}] Node triggered (no action logic)`);
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                    setNodes((nds) =>
+                        nds.map((node) => {
+                            if (node.id === nodeId) {
+                                return {
+                                    ...node,
+                                    data: { ...node.data, status: 'success' },
+                                };
                             }
-
-                            const response = await axios(config);
-
-                            setNodes((nds) =>
-                                nds.map((node) => {
-                                    if (node.id === nodeId) {
-                                        return {
-                                            ...node,
-                                            data: {
-                                                ...node.data,
-                                                status: 'success',
-                                                lastResponse: response.data,
-                                            },
-                                        };
-                                    }
-                                    return node;
-                                })
-                            );
-                            console.log('[API Call] Success:', response.data);
-                        } else {
-                            throw new Error('API Call action requires a URL');
-                        }
-                        break;
-
-                    case 'database':
-                        // TODO: Implement database action
-                        console.log('[Database] Action not yet implemented');
-                        throw new Error('Database action is not yet implemented');
-
-                    case 'email':
-                        // TODO: Implement email action
-                        console.log('[Email] Action not yet implemented');
-                        throw new Error('Email action is not yet implemented');
-
-                    case 'script':
-                        // TODO: Implement script action
-                        console.log('[Script] Action not yet implemented');
-                        throw new Error('Script action is not yet implemented');
-
-                    case 'webhook':
-                        // TODO: Implement webhook action
-                        console.log('[Webhook] Action not yet implemented');
-                        throw new Error('Webhook action is not yet implemented');
-
-                    default:
-                        throw new Error(`Unknown action type: ${actionType}`);
-                }
-            } else {
-                // Fallback for non-action nodes
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-                setNodes((nds) =>
-                    nds.map((node) => {
-                        if (node.id === nodeId) {
-                            return {
-                                ...node,
-                                data: { ...node.data, status: 'success' },
-                            };
-                        }
-                        return node;
-                    })
-                );
-                console.log('Node triggered (no action configured)');
+                            return node;
+                        })
+                    );
+                    break;
             }
         } catch (error) {
             setNodes((nds) =>
