@@ -33,47 +33,80 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         );
 
         try {
-            // Check if this is an action node with API configuration
-            if (nodeData.type === 'action' && nodeData.config?.url) {
-                const { method = 'POST', url, requestBody = {}, headers = {} } = nodeData.config;
+            // Check if this is an action node
+            if (nodeData.type === 'action' && nodeData.config) {
+                const actionType = nodeData.config.actionType || 'apiCall';
 
-                console.log(`Making ${method} request to ${url}`);
+                switch (actionType) {
+                    case 'apiCall':
+                        if (nodeData.config.url) {
+                            const { method = 'POST', url, requestBody = {}, headers = {} } = nodeData.config;
 
-                const config = {
-                    method: method.toLowerCase(),
-                    url: url,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        ...headers,
-                    },
-                };
+                            console.log(`[API Call] Making ${method} request to ${url}`);
 
-                // Add data for POST, PUT, PATCH requests
-                if (['post', 'put', 'patch'].includes(method.toLowerCase())) {
-                    config.data = requestBody;
-                }
-
-                const response = await axios(config);
-
-                setNodes((nds) =>
-                    nds.map((node) => {
-                        if (node.id === nodeId) {
-                            return {
-                                ...node,
-                                data: {
-                                    ...node.data,
-                                    status: 'success',
-                                    lastResponse: response.data,
+                            const config = {
+                                method: method.toLowerCase(),
+                                url: url,
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    ...headers,
                                 },
                             };
+
+                            // Add data for POST, PUT, PATCH requests
+                            if (['post', 'put', 'patch'].includes(method.toLowerCase())) {
+                                config.data = requestBody;
+                            }
+
+                            const response = await axios(config);
+
+                            setNodes((nds) =>
+                                nds.map((node) => {
+                                    if (node.id === nodeId) {
+                                        return {
+                                            ...node,
+                                            data: {
+                                                ...node.data,
+                                                status: 'success',
+                                                lastResponse: response.data,
+                                            },
+                                        };
+                                    }
+                                    return node;
+                                })
+                            );
+                            console.log('[API Call] Success:', response.data);
+                        } else {
+                            throw new Error('API Call action requires a URL');
                         }
-                        return node;
-                    })
-                );
-                console.log('Action executed successfully:', response.data);
+                        break;
+
+                    case 'database':
+                        // TODO: Implement database action
+                        console.log('[Database] Action not yet implemented');
+                        throw new Error('Database action is not yet implemented');
+
+                    case 'email':
+                        // TODO: Implement email action
+                        console.log('[Email] Action not yet implemented');
+                        throw new Error('Email action is not yet implemented');
+
+                    case 'script':
+                        // TODO: Implement script action
+                        console.log('[Script] Action not yet implemented');
+                        throw new Error('Script action is not yet implemented');
+
+                    case 'webhook':
+                        // TODO: Implement webhook action
+                        console.log('[Webhook] Action not yet implemented');
+                        throw new Error('Webhook action is not yet implemented');
+
+                    default:
+                        throw new Error(`Unknown action type: ${actionType}`);
+                }
             } else {
-                // Fallback for non-action nodes or action nodes without URL
+                // Fallback for non-action nodes
                 await new Promise((resolve) => setTimeout(resolve, 1000));
                 setNodes((nds) =>
                     nds.map((node) => {
@@ -86,7 +119,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                         return node;
                     })
                 );
-                console.log('Node triggered (no API call configured)');
+                console.log('Node triggered (no action configured)');
             }
         } catch (error) {
             setNodes((nds) =>
