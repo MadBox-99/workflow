@@ -10,6 +10,14 @@ const ApiCallConfig = ({ config, onChange }) => {
         config.headers ? JSON.stringify(config.headers, null, 2) : '{}'
     );
 
+    // Sync local state with config prop when it changes (e.g., selecting a different node)
+    useEffect(() => {
+        setMethod(config.method || 'POST');
+        setUrl(config.url || '');
+        setRequestBody(config.requestBody ? JSON.stringify(config.requestBody, null, 2) : '{}');
+        setHeaders(config.headers ? JSON.stringify(config.headers, null, 2) : '{}');
+    }, [config]);
+
     useEffect(() => {
         try {
             const parsedBody = requestBody ? JSON.parse(requestBody) : {};

@@ -2,8 +2,10 @@ import React from 'react';
 import WorkflowList from './admin/WorkflowList';
 import WorkflowEditorView from './admin/WorkflowEditorView';
 import { useWorkflowAdmin } from '@/hooks/useWorkflowAdmin';
+import { useToast } from '@/components/ui/toast';
 
 const AdminApp = () => {
+    const toast = useToast();
     const {
         workflows,
         selectedWorkflow,
@@ -18,7 +20,7 @@ const AdminApp = () => {
         handleDeleteWorkflow,
         handleNewWorkflow,
         handleCloseEditor,
-    } = useWorkflowAdmin();
+    } = useWorkflowAdmin(toast);
 
     console.log('AdminApp rendering, workflows:', workflows.length, 'isCreating:', isCreating);
 

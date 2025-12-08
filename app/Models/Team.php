@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Observers\TeamObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Str;
 
+#[ObservedBy(TeamObserver::class)]
 class Team extends Model
 {
     protected $fillable = [
@@ -15,15 +17,6 @@ class Team extends Model
         'slug',
         'owner_id',
     ];
-
-    protected static function booted(): void
-    {
-        static::creating(function (Team $team) {
-            if (empty($team->slug)) {
-                $team->slug = Str::slug($team->name);
-            }
-        });
-    }
 
     public function owner(): BelongsTo
     {

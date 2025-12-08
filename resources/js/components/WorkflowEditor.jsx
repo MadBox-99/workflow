@@ -13,6 +13,8 @@ import WorkflowSidebar from './workflow/WorkflowSidebar';
 import WorkflowPropertiesPanel from './workflow/WorkflowPropertiesPanel';
 import { useWorkflowEditor } from '@/hooks/useWorkflowEditor';
 import { useWorkflowRunner } from '@/hooks/useWorkflowRunner';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { useToast } from '@/components/ui/toast';
 import { defaultEdgeOptions, nodeTypeConfig } from '@/constants/workflowConstants';
 import { Button } from '@/components/ui/button';
 
@@ -230,9 +232,31 @@ const WorkflowEditor = ({ initialNodes = [], initialEdges = [], onSave }) => {
         resetExecution,
     } = useWorkflowRunner(nodes, edges, setNodes, setEdges);
 
+    // Toast notifications
+    const toast = useToast();
+
+    // Auto-save functionality
+    const {
+        autoSaveStatus,
+        saveNow,
+    } = useAutoSave(nodes, edges, onSave, { debounceMs: 2000 });
+
+    // Show toast notifications on save status changes
+    const prevStatusRef = useRef(autoSaveStatus);
+    useEffect(() => {
+        if (prevStatusRef.current !== autoSaveStatus) {
+            if (autoSaveStatus === 'saved') {
+                toast.success('Saved', 'Workflow changes saved successfully');
+            } else if (autoSaveStatus === 'error') {
+                toast.error('Save Failed', 'Failed to save workflow changes');
+            }
+            prevStatusRef.current = autoSaveStatus;
+        }
+    }, [autoSaveStatus, toast]);
+
     const doSave = async () => {
         setIsSaving(true);
-        await handleSave(onSave);
+        await saveNow();
         setIsSaving(false);
     };
 
@@ -330,6 +354,47 @@ const WorkflowEditor = ({ initialNodes = [], initialEdges = [], onSave }) => {
                     proOptions={{ hideAttribution: true }}
                 >
                     <Background variant="dots" gap={20} size={1} color={colorMode === 'dark' ? '#374151' : '#d1d5db'} />
+
+                    {/* Top Left - Auto-save status */}
+                    <Panel position="top-left" className="m-4">
+                        <div className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 shadow-sm text-sm">
+                            {autoSaveStatus === 'idle' && (
+                                <span className="text-gray-500 dark:text-gray-400">Auto-save enabled</span>
+                            )}
+                            {autoSaveStatus === 'pending' && (
+                                <>
+                                    <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                                    <span className="text-amber-600 dark:text-amber-400">Unsaved changes...</span>
+                                </>
+                            )}
+                            {autoSaveStatus === 'saving' && (
+                                <>
+                                    <svg className="w-4 h-4 animate-spin text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                                    </svg>
+                                    <span className="text-blue-600 dark:text-blue-400">Saving...</span>
+                                </>
+                            )}
+                            {autoSaveStatus === 'saved' && (
+                                <>
+                                    <svg className="w-4 h-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M20 6L9 17l-5-5" />
+                                    </svg>
+                                    <span className="text-green-600 dark:text-green-400">Saved</span>
+                                </>
+                            )}
+                            {autoSaveStatus === 'error' && (
+                                <>
+                                    <svg className="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="15" y1="9" x2="9" y2="15" />
+                                        <line x1="9" y1="9" x2="15" y2="15" />
+                                    </svg>
+                                    <span className="text-red-600 dark:text-red-400">Save failed</span>
+                                </>
+                            )}
+                        </div>
+                    </Panel>
 
                     {/* Top Right - Run Button */}
                     <Panel position="top-right" className="m-4">

@@ -13,6 +13,14 @@ const EmailActionConfig = ({ config, onChange }) => {
     const [loadingTemplates, setLoadingTemplates] = useState(true);
     const [selectedTemplateVariables, setSelectedTemplateVariables] = useState(null);
 
+    // Sync local state with config prop when it changes (e.g., selecting a different node)
+    useEffect(() => {
+        setTemplate(config.template || '');
+        setRecipients(config.recipients ? config.recipients.join(', ') : '');
+        setSubject(config.subject || '');
+        setCustomData(config.customData ? JSON.stringify(config.customData, null, 2) : '{}');
+    }, [config]);
+
     useEffect(() => {
         const fetchTemplates = async () => {
             try {

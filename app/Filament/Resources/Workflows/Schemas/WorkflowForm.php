@@ -20,6 +20,10 @@ class WorkflowForm
                     ->schema([
                         TextInput::make('name')
                             ->required(),
+                        Select::make('team_id')
+                            ->relationship('team', 'name')
+                            ->preload()
+                            ->required(),
                         Textarea::make('description')
                             ->columnSpanFull(),
                         Toggle::make('is_active')
@@ -28,6 +32,8 @@ class WorkflowForm
                     ->columns(2),
 
                 Section::make('Nodes')
+                    ->hidden(fn (string $operation): bool => $operation === 'create')
+                    ->columnSpanFull()
                     ->schema([
                         Repeater::make('nodes')
                             ->relationship()
@@ -77,6 +83,7 @@ class WorkflowForm
                     ]),
 
                 Section::make('Connections (Edges)')
+                    ->hidden(fn (string $operation): bool => $operation === 'create')
                     ->schema([
                         Repeater::make('connections')
                             ->relationship()
@@ -98,7 +105,7 @@ class WorkflowForm
                                     ->label('Target Handle'),
                             ])
                             ->columns(2)
-                            ->itemLabel(fn (array $state): ?string => ($state['source_node_id'] ?? '?') . ' → ' . ($state['target_node_id'] ?? '?'))
+                            ->itemLabel(fn (array $state): ?string => ($state['source_node_id'] ?? '?').' → '.($state['target_node_id'] ?? '?'))
                             ->collapsible()
                             ->collapsed()
                             ->reorderableWithButtons()

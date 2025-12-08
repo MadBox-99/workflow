@@ -4,6 +4,12 @@ const ConstantNodeConfig = ({ config, onChange }) => {
     const [valueType, setValueType] = useState(config.valueType || 'string');
     const [value, setValue] = useState(config.value !== undefined ? config.value : '');
 
+    // Sync local state with config prop when it changes (e.g., selecting a different node)
+    useEffect(() => {
+        setValueType(config.valueType || 'string');
+        setValue(config.value !== undefined ? config.value : '');
+    }, [config]);
+
     useEffect(() => {
         onChange({
             valueType,
