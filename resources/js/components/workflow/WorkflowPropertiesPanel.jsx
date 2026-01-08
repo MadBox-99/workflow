@@ -5,6 +5,7 @@ import ConstantNodeConfig from '../ConstantNodeConfig';
 import ApiCallConfig from '../actions/ApiCallConfig';
 import EmailActionConfig from '../actions/EmailActionConfig';
 import DatabaseConfig from '../actions/DatabaseConfig';
+import GoogleCalendarConfig from '../actions/GoogleCalendarConfig';
 
 const WorkflowPropertiesPanel = ({
     selectedNode,
@@ -21,6 +22,7 @@ const WorkflowPropertiesPanel = ({
     deleteSelectedNode,
     deleteNodeConnections,
     deleteSelectedEdge,
+    teamId,
 }) => {
     return (
         <div className="w-80 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-4 h-[600px] overflow-y-auto">
@@ -165,6 +167,25 @@ const WorkflowPropertiesPanel = ({
                                                 🚧 Webhook configuration coming soon...
                                             </p>
                                         </div>
+                                    </div>
+                                );
+
+                            case 'googleCalendarAction':
+                                return (
+                                    <div className="space-y-4">
+                                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-3">
+                                            <h5 className="font-semibold text-sm text-blue-800 dark:text-blue-400 mb-2">
+                                                📅 Google Calendar Configuration
+                                            </h5>
+                                            <p className="text-xs text-blue-600 dark:text-blue-500">
+                                                Create, update, list, or delete Google Calendar events
+                                            </p>
+                                        </div>
+                                        <GoogleCalendarConfig
+                                            config={parsedConfig}
+                                            onChange={configChangeHandler}
+                                            teamId={teamId}
+                                        />
                                     </div>
                                 );
 

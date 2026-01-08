@@ -96,6 +96,7 @@ const WorkflowEditorView = ({
                     initialNodes={initialNodes}
                     initialEdges={initialEdges}
                     onSave={onSave}
+                    teamId={teamId}
                 />
             </ReactFlowProvider>
 

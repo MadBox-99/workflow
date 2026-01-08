@@ -7,6 +7,7 @@ export const nodeTypeConfig = {
     databaseAction: { label: 'Database Action', color: '#8b5cf6', bgColor: '#ede9fe' },
     scriptAction: { label: 'Script Action', color: '#f59e0b', bgColor: '#fef3c7' },
     webhookAction: { label: 'Webhook Action', color: '#10b981', bgColor: '#d1fae5' },
+    googleCalendarAction: { label: 'Google Calendar', color: '#4285f4', bgColor: '#e8f0fe' },
     condition: { label: 'Condition', color: '#eab308', bgColor: '#fef9c3' },
     constant: { label: 'Constant', color: '#a855f7', bgColor: '#f3e8ff' },
     branch: { label: 'Branch', color: '#f97316', bgColor: '#ffedd5' },

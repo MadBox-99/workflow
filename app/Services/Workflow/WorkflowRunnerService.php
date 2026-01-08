@@ -4,6 +4,7 @@ namespace App\Services\Workflow;
 
 use App\Models\Workflow;
 use App\Models\WorkflowNode;
+use App\Services\Google\GoogleCalendarService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -257,6 +258,7 @@ class WorkflowRunnerService
             'databaseAction' => $this->executeDatabaseAction($config, $inputValues),
             'scriptAction' => $this->executeScriptAction($config, $inputValues),
             'webhookAction' => $this->executeWebhookAction($config, $inputValues),
+            'googleCalendarAction' => $this->executeGoogleCalendarAction($config, $inputValues),
             default => ['success' => true, 'output' => $inputValues['input'] ?? null],
         };
     }
@@ -336,6 +338,7 @@ class WorkflowRunnerService
         try {
             $request = Http::withHeaders($headers);
 
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = match ($method) {
                 'POST' => $request->post($url, $body),
                 'PUT' => $request->put($url, $body),
@@ -482,6 +485,104 @@ class WorkflowRunnerService
         } catch (\Exception $e) {
             return ['success' => false, 'error' => "Webhook failed: {$e->getMessage()}"];
         }
+    }
+
+    protected function executeGoogleCalendarAction(array $config, array $inputValues): array
+    {
+        $team = $this->workflow->team;
+
+        if (! $team || ! $team->hasGoogleCalendarConnected()) {
+            return [
+                'success' => false,
+                'error' => 'Google Calendar is not connected for this team',
+            ];
+        }
+
+        $operation = $config['operation'] ?? 'create';
+        $calendarId = $config['calendarId'] ?? 'primary';
+
+        $config = $this->replacePlaceholders($config, $inputValues);
+
+        try {
+            $calendarService = app(GoogleCalendarService::class);
+
+            $result = match ($operation) {
+                'create' => $calendarService->createEvent($team, $calendarId, [
+                    'summary' => $config['summary'] ?? '',
+                    'description' => $config['description'] ?? '',
+                    'location' => $config['location'] ?? '',
+                    'start' => [
+                        'dateTime' => $config['startDateTime'] ?? now()->toIso8601String(),
+                        'timeZone' => $config['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
+                    ],
+                    'end' => [
+                        'dateTime' => $config['endDateTime'] ?? now()->addHour()->toIso8601String(),
+                        'timeZone' => $config['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
+                    ],
+                    'attendees' => $this->parseAttendees($config['attendees'] ?? ''),
+                ]),
+                'list' => $calendarService->listEvents($team, $calendarId, [
+                    'timeMin' => $config['timeMin'] ?? null,
+                    'timeMax' => $config['timeMax'] ?? null,
+                    'maxResults' => $config['maxResults'] ?? 10,
+                ]),
+                'update' => $calendarService->updateEvent(
+                    $team,
+                    $calendarId,
+                    $config['eventId'] ?? '',
+                    array_filter([
+                        'summary' => $config['summary'] ?? null,
+                        'description' => $config['description'] ?? null,
+                        'location' => $config['location'] ?? null,
+                        'start' => $config['startDateTime'] ? [
+                            'dateTime' => $config['startDateTime'],
+                            'timeZone' => $config['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
+                        ] : null,
+                        'end' => $config['endDateTime'] ? [
+                            'dateTime' => $config['endDateTime'],
+                            'timeZone' => $config['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
+                        ] : null,
+                    ])
+                ),
+                'delete' => $calendarService->deleteEvent($team, $calendarId, $config['eventId'] ?? ''),
+                default => throw new \InvalidArgumentException("Unknown operation: {$operation}"),
+            };
+
+            $this->log('info', "Google Calendar {$operation} completed successfully");
+
+            return [
+                'success' => true,
+                'output' => $result,
+            ];
+
+        } catch (\Google\Service\Exception $e) {
+            $this->log('error', "Google Calendar API error: {$e->getMessage()}");
+
+            return [
+                'success' => false,
+                'error' => "Google Calendar API error: {$e->getMessage()}",
+            ];
+        } catch (\Exception $e) {
+            $this->log('error', "Google Calendar action failed: {$e->getMessage()}");
+
+            return [
+                'success' => false,
+                'error' => "Google Calendar action failed: {$e->getMessage()}",
+            ];
+        }
+    }
+
+    protected function parseAttendees(string $attendees): array
+    {
+        if (empty($attendees)) {
+            return [];
+        }
+
+        return collect(explode(',', $attendees))
+            ->map(fn ($email) => ['email' => trim($email)])
+            ->filter(fn ($a) => filter_var($a['email'], FILTER_VALIDATE_EMAIL))
+            ->values()
+            ->toArray();
     }
 
     protected function replacePlaceholders(array $data, array $values): array

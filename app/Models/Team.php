@@ -4,14 +4,18 @@ namespace App\Models;
 
 use App\Observers\TeamObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[ObservedBy(TeamObserver::class)]
 class Team extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'name',
         'slug',
@@ -43,5 +47,15 @@ class Team extends Model
     public function availableScheduleOptions()
     {
         return $this->scheduleOptions()->active()->ordered();
+    }
+
+    public function googleCredential(): HasOne
+    {
+        return $this->hasOne(TeamGoogleCredential::class);
+    }
+
+    public function hasGoogleCalendarConnected(): bool
+    {
+        return $this->googleCredential !== null;
     }
 }

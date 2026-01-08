@@ -183,7 +183,7 @@ const ZoomControls = ({ onSave, onReset, isSaving }) => {
     );
 };
 
-const WorkflowEditor = ({ initialNodes = [], initialEdges = [], onSave }) => {
+const WorkflowEditor = ({ initialNodes = [], initialEdges = [], onSave, teamId }) => {
     const reactFlowWrapper = useRef(null);
     const edgeTypes = useMemo(() => ({ floating: FloatingEdge }), []);
     const [isSaving, setIsSaving] = useState(false);
@@ -457,6 +457,7 @@ const WorkflowEditor = ({ initialNodes = [], initialEdges = [], onSave }) => {
                 deleteSelectedNode={deleteSelectedNode}
                 deleteNodeConnections={deleteNodeConnections}
                 deleteSelectedEdge={deleteSelectedEdge}
+                teamId={teamId}
             />
         </div>
     );

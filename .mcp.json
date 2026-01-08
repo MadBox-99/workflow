@@ -1,5 +1,13 @@
 {
     "mcpServers": {
+        "filament": {
+            "command": "php",
+            "args": [
+                "artisan",
+                "mcp:start",
+                "filament"
+            ]
+        },
         "laravel-boost": {
             "command": "php",
             "args": [
