@@ -325,7 +325,8 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges) => {
                     updateNodeStatus(node.id, 'error', {
                         lastError: error.message,
                     });
-                    break;
+                    // Continue with other branches instead of stopping entire workflow
+                    continue;
                 }
 
                 // Delay between nodes

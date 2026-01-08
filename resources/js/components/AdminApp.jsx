@@ -12,9 +12,17 @@ const AdminApp = () => {
         isCreating,
         workflowName,
         workflowDescription,
+        isScheduled,
+        scheduleCron,
         loading,
+        teamId,
+        teams,
+        scheduleOptions,
         setWorkflowName,
         setWorkflowDescription,
+        setIsScheduled,
+        setScheduleCron,
+        setTeamId,
         handleSaveWorkflow,
         handleEditWorkflow,
         handleDeleteWorkflow,
@@ -44,8 +52,16 @@ const AdminApp = () => {
                     selectedWorkflow={selectedWorkflow}
                     workflowName={workflowName}
                     workflowDescription={workflowDescription}
+                    isScheduled={isScheduled}
+                    scheduleCron={scheduleCron}
+                    teamId={teamId}
+                    teams={teams}
+                    scheduleOptions={scheduleOptions}
                     onNameChange={setWorkflowName}
                     onDescriptionChange={setWorkflowDescription}
+                    onScheduledChange={setIsScheduled}
+                    onScheduleCronChange={setScheduleCron}
+                    onTeamChange={setTeamId}
                     onSave={handleSaveWorkflow}
                     onClose={handleCloseEditor}
                     loading={loading}

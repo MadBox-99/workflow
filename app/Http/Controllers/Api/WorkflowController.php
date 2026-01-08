@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\EmailTemplate;
+use App\Models\Team;
 use App\Models\Workflow;
 use App\Models\WorkflowConnection;
 use App\Models\WorkflowNode;
@@ -26,7 +27,10 @@ class WorkflowController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'team_id' => 'required|exists:teams,id',
             'is_active' => 'boolean',
+            'is_scheduled' => 'boolean',
+            'schedule_cron' => 'nullable|string|max:100',
             'metadata' => 'nullable|array',
             'nodes' => 'nullable|array',
             'connections' => 'nullable|array',
@@ -37,9 +41,17 @@ class WorkflowController extends Controller
             $workflow = Workflow::create([
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
+                'team_id' => $validated['team_id'],
                 'is_active' => $validated['is_active'] ?? true,
+                'is_scheduled' => $validated['is_scheduled'] ?? false,
+                'schedule_cron' => $validated['schedule_cron'] ?? null,
                 'metadata' => $validated['metadata'] ?? null,
             ]);
+
+            // Calculate next run time if scheduled
+            if ($workflow->is_scheduled && $workflow->schedule_cron) {
+                $workflow->update(['next_run_at' => $workflow->calculateNextRunAt()]);
+            }
 
             if (isset($validated['nodes'])) {
                 foreach ($validated['nodes'] as $node) {
@@ -89,7 +101,10 @@ class WorkflowController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
+            'team_id' => 'sometimes|required|exists:teams,id',
             'is_active' => 'boolean',
+            'is_scheduled' => 'boolean',
+            'schedule_cron' => 'nullable|string|max:100',
             'metadata' => 'nullable|array',
             'nodes' => 'nullable|array',
             'connections' => 'nullable|array',
@@ -99,12 +114,26 @@ class WorkflowController extends Controller
         try {
             $workflow = Workflow::findOrFail($id);
 
-            $workflow->update([
+            $updateData = [
                 'name' => $validated['name'] ?? $workflow->name,
                 'description' => $validated['description'] ?? $workflow->description,
+                'team_id' => $validated['team_id'] ?? $workflow->team_id,
                 'is_active' => $validated['is_active'] ?? $workflow->is_active,
+                'is_scheduled' => $validated['is_scheduled'] ?? $workflow->is_scheduled,
+                'schedule_cron' => $validated['schedule_cron'] ?? $workflow->schedule_cron,
                 'metadata' => $validated['metadata'] ?? $workflow->metadata,
-            ]);
+            ];
+
+            $workflow->update($updateData);
+
+            // Recalculate next_run_at if scheduling changed
+            if (isset($validated['is_scheduled']) || isset($validated['schedule_cron'])) {
+                if ($workflow->is_scheduled && $workflow->schedule_cron) {
+                    $workflow->update(['next_run_at' => $workflow->calculateNextRunAt()]);
+                } elseif (! $workflow->is_scheduled) {
+                    $workflow->update(['next_run_at' => null]);
+                }
+            }
 
             if (isset($validated['nodes'])) {
                 $workflow->nodes()->delete();
@@ -219,5 +248,30 @@ class WorkflowController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function scheduleOptions(Request $request): JsonResponse
+    {
+        $teamId = $request->query('team_id');
+
+        if (! $teamId) {
+            return response()->json([]);
+        }
+
+        $team = Team::find($teamId);
+
+        if (! $team) {
+            return response()->json([]);
+        }
+
+        $options = $team->availableScheduleOptions()
+            ->get()
+            ->map(fn ($option) => [
+                'value' => $option->cron_expression,
+                'label' => $option->name,
+                'description' => $option->description,
+            ]);
+
+        return response()->json($options);
     }
 }

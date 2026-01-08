@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Workflows\Schemas;
 
+use App\Models\Team;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -23,11 +24,53 @@ class WorkflowForm
                         Select::make('team_id')
                             ->relationship('team', 'name')
                             ->preload()
+                            ->live()
                             ->required(),
                         Textarea::make('description')
                             ->columnSpanFull(),
                         Toggle::make('is_active')
                             ->required(),
+                    ])
+                    ->columns(2),
+
+                Section::make('Ütemezés')
+                    ->description('Automatikus workflow futtatás beállítása')
+                    ->schema([
+                        Toggle::make('is_scheduled')
+                            ->label('Ütemezett futtatás')
+                            ->live()
+                            ->default(false),
+                        Select::make('schedule_cron')
+                            ->label('Futtatási gyakoriság')
+                            ->options(function ($get) {
+                                $teamId = $get('team_id');
+                                if (! $teamId) {
+                                    return [];
+                                }
+
+                                $team = Team::find($teamId);
+                                if (! $team) {
+                                    return [];
+                                }
+
+                                return $team->availableScheduleOptions()
+                                    ->get()
+                                    ->pluck('name', 'cron_expression')
+                                    ->toArray();
+                            })
+                            ->default('*/5 * * * *')
+                            ->visible(fn ($get) => $get('is_scheduled') && $get('team_id'))
+                            ->required(fn ($get) => $get('is_scheduled')),
+                        TextInput::make('last_run_at')
+                            ->label('Utolsó futás')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->formatStateUsing(fn ($state) => $state ? \Carbon\Carbon::parse($state)->format('Y-m-d H:i:s') : 'Még nem futott'),
+                        TextInput::make('next_run_at')
+                            ->label('Következő futás')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->formatStateUsing(fn ($state) => $state ? \Carbon\Carbon::parse($state)->format('Y-m-d H:i:s') : 'Nincs ütemezve'),
                     ])
                     ->columns(2),
 

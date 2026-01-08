@@ -34,4 +34,14 @@ class Team extends Model
     {
         return $this->hasMany(EmailTemplate::class);
     }
+
+    public function scheduleOptions(): BelongsToMany
+    {
+        return $this->belongsToMany(ScheduleOption::class)->withTimestamps();
+    }
+
+    public function availableScheduleOptions()
+    {
+        return $this->scheduleOptions()->active()->ordered();
+    }
 }

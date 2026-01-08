@@ -30,8 +30,16 @@ const WorkflowEditorView = ({
     selectedWorkflow,
     workflowName,
     workflowDescription,
+    isScheduled,
+    scheduleCron,
+    teamId,
+    teams,
+    scheduleOptions,
     onNameChange,
     onDescriptionChange,
+    onScheduledChange,
+    onScheduleCronChange,
+    onTeamChange,
     onSave,
     onClose,
     loading,
@@ -70,9 +78,17 @@ const WorkflowEditorView = ({
             <WorkflowForm
                 workflowName={workflowName}
                 workflowDescription={workflowDescription}
+                isScheduled={isScheduled}
+                scheduleCron={scheduleCron}
                 selectedWorkflow={selectedWorkflow}
+                teamId={teamId}
+                teams={teams}
+                scheduleOptions={scheduleOptions}
                 onNameChange={onNameChange}
                 onDescriptionChange={onDescriptionChange}
+                onScheduledChange={onScheduledChange}
+                onScheduleCronChange={onScheduleCronChange}
+                onTeamChange={onTeamChange}
             />
 
             <ReactFlowProvider>

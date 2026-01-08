@@ -7,7 +7,12 @@ export const useWorkflowAdmin = (toast = null) => {
     const [isCreating, setIsCreating] = useState(false);
     const [workflowName, setWorkflowName] = useState('');
     const [workflowDescription, setWorkflowDescription] = useState('');
+    const [isScheduled, setIsScheduled] = useState(false);
+    const [scheduleCron, setScheduleCron] = useState('*/5 * * * *');
     const [loading, setLoading] = useState(false);
+    const [teamId, setTeamId] = useState(null);
+    const [teams, setTeams] = useState([]);
+    const [scheduleOptions, setScheduleOptions] = useState([]);
 
     // Helper to show notifications (toast or console fallback)
     const notify = useCallback(
@@ -36,6 +41,40 @@ export const useWorkflowAdmin = (toast = null) => {
         }
     }, [notify]);
 
+    const fetchTeams = useCallback(async () => {
+        try {
+            const response = await axios.get('/api/teams');
+            setTeams(response.data);
+            // Auto-select first team if none selected
+            if (response.data.length > 0 && !teamId) {
+                setTeamId(response.data[0].id);
+            }
+        } catch (error) {
+            console.error('Error fetching teams:', error);
+        }
+    }, [teamId]);
+
+    const fetchScheduleOptions = useCallback(async (forTeamId) => {
+        if (!forTeamId) {
+            setScheduleOptions([]);
+            return;
+        }
+        try {
+            const response = await axios.get(`/api/schedule-options?team_id=${forTeamId}`);
+            setScheduleOptions(response.data);
+            // Set default cron if available and current is not in options
+            if (response.data.length > 0) {
+                const currentInOptions = response.data.some((opt) => opt.value === scheduleCron);
+                if (!currentInOptions) {
+                    setScheduleCron(response.data[0].value);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching schedule options:', error);
+            setScheduleOptions([]);
+        }
+    }, [scheduleCron]);
+
     const loadWorkflowForEdit = useCallback(
         async (workflowId) => {
             try {
@@ -45,6 +84,9 @@ export const useWorkflowAdmin = (toast = null) => {
                 setSelectedWorkflow(workflow);
                 setWorkflowName(workflow.name);
                 setWorkflowDescription(workflow.description || '');
+                setIsScheduled(workflow.is_scheduled || false);
+                setScheduleCron(workflow.schedule_cron || '*/5 * * * *');
+                setTeamId(workflow.team_id || null);
                 setIsCreating(true);
             } catch (error) {
                 console.error('Error loading workflow:', error);
@@ -59,6 +101,7 @@ export const useWorkflowAdmin = (toast = null) => {
     useEffect(() => {
         console.log('AdminApp mounted');
         fetchWorkflows();
+        fetchTeams();
 
         // Check URL for workflow ID
         const urlParams = new URLSearchParams(window.location.search);
@@ -66,7 +109,14 @@ export const useWorkflowAdmin = (toast = null) => {
         if (workflowId) {
             loadWorkflowForEdit(workflowId);
         }
-    }, [fetchWorkflows, loadWorkflowForEdit]);
+    }, [fetchWorkflows, fetchTeams, loadWorkflowForEdit]);
+
+    // Fetch schedule options when team changes
+    useEffect(() => {
+        if (teamId) {
+            fetchScheduleOptions(teamId);
+        }
+    }, [teamId, fetchScheduleOptions]);
 
     const handleSaveWorkflow = useCallback(
         async (workflowData) => {
@@ -75,14 +125,22 @@ export const useWorkflowAdmin = (toast = null) => {
                 return;
             }
 
+            if (!teamId) {
+                notify('warning', 'Validation', 'Please select a team');
+                return;
+            }
+
             try {
                 setLoading(true);
                 const payload = {
                     name: workflowName,
                     description: workflowDescription,
+                    team_id: teamId,
                     nodes: workflowData.nodes,
                     connections: workflowData.connections,
                     is_active: true,
+                    is_scheduled: isScheduled,
+                    schedule_cron: isScheduled ? scheduleCron : null,
                 };
 
                 if (selectedWorkflow) {
@@ -96,6 +154,8 @@ export const useWorkflowAdmin = (toast = null) => {
                     setSelectedWorkflow(response.data);
                     setWorkflowName(response.data.name);
                     setWorkflowDescription(response.data.description || '');
+                    setIsScheduled(response.data.is_scheduled || false);
+                    setScheduleCron(response.data.schedule_cron || '*/5 * * * *');
                 }
 
                 fetchWorkflows();
@@ -106,13 +166,16 @@ export const useWorkflowAdmin = (toast = null) => {
                 setLoading(false);
             }
         },
-        [workflowName, workflowDescription, selectedWorkflow, fetchWorkflows, notify]
+        [workflowName, workflowDescription, isScheduled, scheduleCron, selectedWorkflow, fetchWorkflows, notify]
     );
 
     const handleEditWorkflow = useCallback((workflow) => {
         setSelectedWorkflow(workflow);
         setWorkflowName(workflow.name);
         setWorkflowDescription(workflow.description || '');
+        setIsScheduled(workflow.is_scheduled || false);
+        setScheduleCron(workflow.schedule_cron || '*/5 * * * *');
+        setTeamId(workflow.team_id || null);
         setIsCreating(true);
     }, []);
 
@@ -140,6 +203,8 @@ export const useWorkflowAdmin = (toast = null) => {
         setSelectedWorkflow(null);
         setWorkflowName('');
         setWorkflowDescription('');
+        setIsScheduled(false);
+        setScheduleCron('*/5 * * * *');
     }, []);
 
     const handleCloseEditor = useCallback(() => {
@@ -147,6 +212,8 @@ export const useWorkflowAdmin = (toast = null) => {
         setSelectedWorkflow(null);
         setWorkflowName('');
         setWorkflowDescription('');
+        setIsScheduled(false);
+        setScheduleCron('*/5 * * * *');
     }, []);
 
     return {
@@ -155,9 +222,17 @@ export const useWorkflowAdmin = (toast = null) => {
         isCreating,
         workflowName,
         workflowDescription,
+        isScheduled,
+        scheduleCron,
         loading,
+        teamId,
+        teams,
+        scheduleOptions,
         setWorkflowName,
         setWorkflowDescription,
+        setIsScheduled,
+        setScheduleCron,
+        setTeamId,
         handleSaveWorkflow,
         handleEditWorkflow,
         handleDeleteWorkflow,

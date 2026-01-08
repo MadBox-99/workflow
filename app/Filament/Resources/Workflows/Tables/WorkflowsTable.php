@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Workflows\Tables;
 
+use App\Models\Workflow;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -19,7 +20,27 @@ class WorkflowsTable
                 TextColumn::make('name')
                     ->searchable(),
                 IconColumn::make('is_active')
+                    ->label('Active')
                     ->boolean(),
+                IconColumn::make('is_scheduled')
+                    ->label('Scheduled')
+                    ->boolean(),
+                TextColumn::make('schedule_cron')
+                    ->label('Schedule')
+                    ->formatStateUsing(fn ($state) => Workflow::describeCron($state))
+                    ->toggleable(),
+                TextColumn::make('last_run_at')
+                    ->label('Last Run')
+                    ->dateTime()
+                    ->sortable()
+                    ->placeholder('Never')
+                    ->toggleable(),
+                TextColumn::make('next_run_at')
+                    ->label('Next Run')
+                    ->dateTime()
+                    ->sortable()
+                    ->placeholder('Not scheduled')
+                    ->toggleable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
