@@ -5,8 +5,9 @@ import StartNode from './StartNode';
 import EndNode from './EndNode';
 import BranchNode from './BranchNode';
 import JoinNode from './JoinNode';
+import GoogleCalendarNode from './GoogleCalendarNode';
 
-export { ActionNode, ConditionNode, ConstantNode, StartNode, EndNode, BranchNode, JoinNode };
+export { ActionNode, ConditionNode, ConstantNode, StartNode, EndNode, BranchNode, JoinNode, GoogleCalendarNode };
 
 export const nodeTypes = {
     action: ActionNode,
@@ -16,6 +17,7 @@ export const nodeTypes = {
     end: EndNode,
     branch: BranchNode,
     join: JoinNode,
+    googleCalendar: GoogleCalendarNode,
 };
 
 export default nodeTypes;

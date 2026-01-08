@@ -29,7 +29,7 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
         }));
     }, [edges]);
 
-    // Find incoming node values (for condition nodes)
+    // Find incoming node values (for condition nodes and Google Calendar nodes)
     const getInputValues = useCallback((nodeId) => {
         const incomingEdges = edges.filter((edge) => edge.target === nodeId);
         const values = {};
@@ -40,10 +40,20 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                 // Get the output value from the source node
                 const value = sourceNode.data.outputValue ?? sourceNode.data.config?.value ?? sourceNode.data.lastResponse;
 
-                if (edge.targetHandle === 'input-a') {
+                // Check if source node has a targetField configured (for Constant nodes targeting Calendar fields)
+                const targetField = sourceNode.data.config?.targetField;
+
+                if (targetField) {
+                    // Use the targetField as the key (e.g., 'summary', 'startDateTime', 'endDateTime', etc.)
+                    values[targetField] = value;
+                } else if (edge.targetHandle === 'input-a') {
                     values.valueA = value;
                 } else if (edge.targetHandle === 'input-b') {
                     values.valueB = value;
+                } else if (edge.targetHandle === 'start-input') {
+                    values.startDateTime = value;
+                } else if (edge.targetHandle === 'end-input') {
+                    values.endDateTime = value;
                 } else {
                     values.input = value;
                 }
@@ -139,8 +149,62 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
             case 'end':
                 return { success: true, finished: true };
 
-            case 'constant':
+            case 'constant': {
+                // Handle datetime type - calculate value at runtime
+                if (config.valueType === 'datetime') {
+                    const now = new Date();
+                    let result;
+
+                    switch (config.datetimeOption) {
+                        case 'now':
+                            result = now;
+                            break;
+                        case 'today':
+                            result = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                            break;
+                        case 'tomorrow':
+                            result = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+                            break;
+                        case 'next_week':
+                            result = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                            break;
+                        case 'next_month':
+                            result = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+                            break;
+                        case 'in_1_hour':
+                            result = new Date(now.getTime() + 60 * 60 * 1000);
+                            break;
+                        case 'in_2_hours':
+                            result = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+                            break;
+                        case 'in_30_min':
+                            result = new Date(now.getTime() + 30 * 60 * 1000);
+                            break;
+                        case 'end_of_day':
+                            result = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                            break;
+                        case 'custom_offset': {
+                            const multipliers = { minutes: 60 * 1000, hours: 60 * 60 * 1000, days: 24 * 60 * 60 * 1000 };
+                            const amount = config.offsetAmount || 1;
+                            const unit = config.offsetUnit || 'hours';
+                            result = new Date(now.getTime() + amount * (multipliers[unit] || 0));
+                            break;
+                        }
+                        case 'fixed':
+                            result = config.fixedDateTime ? new Date(config.fixedDateTime) : now;
+                            break;
+                        default:
+                            result = now;
+                    }
+
+                    // Format as ISO string for Google Calendar compatibility
+                    const formattedDate = result.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:mm"
+                    console.log(`[Runner] Constant datetime: ${config.datetimeOption} -> ${formattedDate}`);
+                    return { success: true, output: formattedDate };
+                }
+
                 return { success: true, output: config.value };
+            }
 
             case 'condition': {
                 const operator = config.operator || 'equals';
@@ -248,7 +312,18 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     throw new Error('Google Calendar action requires an operation');
                 }
 
+                // Use input values from connected nodes if available, otherwise fall back to config
+                // This allows dynamic values from Constant nodes with targetField set
+                const summary = inputValues.summary || config.summary;
+                const description = inputValues.description || config.description;
+                const location = inputValues.location || config.location;
+                const startDateTime = inputValues.startDateTime || config.startDateTime;
+                const endDateTime = inputValues.endDateTime || config.endDateTime;
+                const attendees = inputValues.attendees || config.attendees;
+                const eventId = inputValues.eventId || config.eventId;
+
                 console.log('[Runner] Executing Google Calendar action:', config);
+                console.log('[Runner] Dynamic values from inputs:', inputValues);
 
                 const calendarResponse = await fetch('/api/workflows/actions/google-calendar', {
                     method: 'POST',
@@ -260,13 +335,13 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         team_id: teamId,
                         operation: config.operation,
                         calendarId: config.calendarId || 'primary',
-                        summary: config.summary,
-                        description: config.description,
-                        startDateTime: config.startDateTime,
-                        endDateTime: config.endDateTime,
-                        location: config.location,
-                        attendees: config.attendees,
-                        eventId: config.eventId,
+                        summary: summary,
+                        description: description,
+                        startDateTime: startDateTime,
+                        endDateTime: endDateTime,
+                        location: location,
+                        attendees: attendees,
+                        eventId: eventId,
                         timeMin: config.timeMin,
                         timeMax: config.timeMax,
                         maxResults: config.maxResults,

@@ -6,6 +6,7 @@ import axios from 'axios';
 
 // Map data types to React Flow node types
 const getReactFlowNodeType = (dataType) => {
+    if (dataType === 'googleCalendarAction') return 'googleCalendar';
     const actionTypes = ['apiAction', 'emailAction', 'databaseAction', 'scriptAction', 'webhookAction', 'action'];
     if (actionTypes.includes(dataType)) return 'action';
     if (['start', 'end', 'condition', 'constant', 'branch', 'join'].includes(dataType)) return dataType;
@@ -25,6 +26,8 @@ const getNodeDimensions = (nodeType) => {
         case 'branch':
         case 'join':
             return { width: 220, height: 70 };
+        case 'googleCalendar':
+            return { width: 240, height: 80 };
         default:
             return { width: 180, height: 70 };
     }

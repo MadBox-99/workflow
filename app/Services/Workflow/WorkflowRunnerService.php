@@ -227,10 +227,22 @@ class WorkflowRunnerService
         foreach ($incomingConnections as $conn) {
             $sourceOutput = $this->nodeOutputs[$conn->source_node_id] ?? null;
 
-            if ($conn->target_handle === 'input-a') {
+            // Get source node to check for targetField config
+            $sourceNode = $this->nodes->firstWhere('node_id', $conn->source_node_id);
+            $sourceConfig = $sourceNode?->data['config'] ?? [];
+            $targetField = $sourceConfig['targetField'] ?? null;
+
+            if ($targetField) {
+                // Use the targetField as the key (e.g., 'summary', 'startDateTime', 'endDateTime', etc.)
+                $values[$targetField] = $sourceOutput;
+            } elseif ($conn->target_handle === 'input-a') {
                 $values['valueA'] = $sourceOutput;
             } elseif ($conn->target_handle === 'input-b') {
                 $values['valueB'] = $sourceOutput;
+            } elseif ($conn->target_handle === 'start-input') {
+                $values['startDateTime'] = $sourceOutput;
+            } elseif ($conn->target_handle === 'end-input') {
+                $values['endDateTime'] = $sourceOutput;
             } else {
                 $values['input'] = $sourceOutput;
             }
@@ -275,7 +287,44 @@ class WorkflowRunnerService
 
     protected function executeConstantNode(array $config): array
     {
+        // Handle datetime type - calculate value at runtime
+        if (($config['valueType'] ?? null) === 'datetime') {
+            $now = now();
+            $result = match ($config['datetimeOption'] ?? 'now') {
+                'now' => $now,
+                'today' => $now->startOfDay(),
+                'tomorrow' => $now->addDay()->startOfDay(),
+                'next_week' => $now->addWeek(),
+                'next_month' => $now->addMonth(),
+                'in_1_hour' => $now->addHour(),
+                'in_2_hours' => $now->addHours(2),
+                'in_30_min' => $now->addMinutes(30),
+                'end_of_day' => $now->endOfDay(),
+                'custom_offset' => $this->calculateCustomOffset($now, $config),
+                'fixed' => ! empty($config['fixedDateTime'])
+                    ? \Carbon\Carbon::parse($config['fixedDateTime'])
+                    : $now,
+                default => $now,
+            };
+
+            // Format as ISO 8601 for Google Calendar compatibility
+            return ['success' => true, 'output' => $result->format('Y-m-d\TH:i')];
+        }
+
         return ['success' => true, 'output' => $config['value'] ?? null];
+    }
+
+    protected function calculateCustomOffset(\Carbon\Carbon $now, array $config): \Carbon\Carbon
+    {
+        $amount = (int) ($config['offsetAmount'] ?? 1);
+        $unit = $config['offsetUnit'] ?? 'hours';
+
+        return match ($unit) {
+            'minutes' => $now->addMinutes($amount),
+            'hours' => $now->addHours($amount),
+            'days' => $now->addDays($amount),
+            default => $now->addHours($amount),
+        };
     }
 
     protected function executeConditionNode(array $config, array $inputValues): array
@@ -503,23 +552,35 @@ class WorkflowRunnerService
 
         $config = $this->replacePlaceholders($config, $inputValues);
 
+        // Use input values from connected nodes if available, otherwise fall back to config
+        // This allows dynamic values from Constant nodes with targetField set
+        $summary = $inputValues['summary'] ?? $config['summary'] ?? '';
+        $description = $inputValues['description'] ?? $config['description'] ?? '';
+        $location = $inputValues['location'] ?? $config['location'] ?? '';
+        $startDateTime = $inputValues['startDateTime'] ?? $config['startDateTime'] ?? null;
+        $endDateTime = $inputValues['endDateTime'] ?? $config['endDateTime'] ?? null;
+        $attendees = $inputValues['attendees'] ?? $config['attendees'] ?? '';
+        $eventId = $inputValues['eventId'] ?? $config['eventId'] ?? '';
+
+        $this->log('info', "Google Calendar {$operation} - Summary: {$summary}, Start: {$startDateTime}, End: {$endDateTime}");
+
         try {
             $calendarService = app(GoogleCalendarService::class);
 
             $result = match ($operation) {
                 'create' => $calendarService->createEvent($team, $calendarId, [
-                    'summary' => $config['summary'] ?? '',
-                    'description' => $config['description'] ?? '',
-                    'location' => $config['location'] ?? '',
+                    'summary' => $summary,
+                    'description' => $description,
+                    'location' => $location,
                     'start' => [
-                        'dateTime' => $config['startDateTime'] ?? now()->toIso8601String(),
+                        'dateTime' => $startDateTime ?? now()->toIso8601String(),
                         'timeZone' => $config['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
                     ],
                     'end' => [
-                        'dateTime' => $config['endDateTime'] ?? now()->addHour()->toIso8601String(),
+                        'dateTime' => $endDateTime ?? now()->addHour()->toIso8601String(),
                         'timeZone' => $config['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
                     ],
-                    'attendees' => $this->parseAttendees($config['attendees'] ?? ''),
+                    'attendees' => $this->parseAttendees($attendees),
                 ]),
                 'list' => $calendarService->listEvents($team, $calendarId, [
                     'timeMin' => $config['timeMin'] ?? null,
@@ -529,22 +590,22 @@ class WorkflowRunnerService
                 'update' => $calendarService->updateEvent(
                     $team,
                     $calendarId,
-                    $config['eventId'] ?? '',
+                    $eventId,
                     array_filter([
-                        'summary' => $config['summary'] ?? null,
-                        'description' => $config['description'] ?? null,
-                        'location' => $config['location'] ?? null,
-                        'start' => $config['startDateTime'] ? [
-                            'dateTime' => $config['startDateTime'],
+                        'summary' => $summary ?: null,
+                        'description' => $description ?: null,
+                        'location' => $location ?: null,
+                        'start' => $startDateTime ? [
+                            'dateTime' => $startDateTime,
                             'timeZone' => $config['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
                         ] : null,
-                        'end' => $config['endDateTime'] ? [
-                            'dateTime' => $config['endDateTime'],
+                        'end' => $endDateTime ? [
+                            'dateTime' => $endDateTime,
                             'timeZone' => $config['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
                         ] : null,
                     ])
                 ),
-                'delete' => $calendarService->deleteEvent($team, $calendarId, $config['eventId'] ?? ''),
+                'delete' => $calendarService->deleteEvent($team, $calendarId, $eventId),
                 default => throw new \InvalidArgumentException("Unknown operation: {$operation}"),
             };
 
