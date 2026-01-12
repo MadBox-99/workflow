@@ -121,7 +121,13 @@ const WorkflowPropertiesPanel = ({
                                                 Configure HTTP API requests to external services
                                             </p>
                                         </div>
-                                        <ApiCallConfig config={parsedConfig} onChange={configChangeHandler} />
+                                        <ApiCallConfig
+                                            config={parsedConfig}
+                                            onChange={configChangeHandler}
+                                            nodeId={selectedNode.id}
+                                            nodes={nodes}
+                                            edges={edges}
+                                        />
                                     </div>
                                 );
 

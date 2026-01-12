@@ -315,7 +315,82 @@ class WorkflowRunnerService
             return ['success' => true, 'output' => $result->toIso8601String()];
         }
 
+        // Handle richtext type - convert to plaintext if requested
+        if (($config['valueType'] ?? null) === 'richtext' && ($config['outputFormat'] ?? 'html') === 'plaintext') {
+            $html = $config['value'] ?? '';
+
+            return ['success' => true, 'output' => $this->convertHtmlToPlaintext($html)];
+        }
+
         return ['success' => true, 'output' => $config['value'] ?? null];
+    }
+
+    /**
+     * Convert HTML rich text to formatted plain text for Google Docs compatibility.
+     */
+    protected function convertHtmlToPlaintext(string $html): string
+    {
+        if (empty($html)) {
+            return '';
+        }
+
+        // Process mentions - replace <span data-type="mention" ...>@Label</span> with @Label
+        $html = preg_replace('/<span[^>]*data-type="mention"[^>]*>([^<]*)<\/span>/i', '$1', $html);
+
+        // Replace headings with text and double newlines
+        $html = preg_replace('/<h1[^>]*>(.*?)<\/h1>/is', "\n$1\n\n", $html);
+        $html = preg_replace('/<h2[^>]*>(.*?)<\/h2>/is', "\n$1\n\n", $html);
+        $html = preg_replace('/<h3[^>]*>(.*?)<\/h3>/is', "\n$1\n\n", $html);
+
+        // Replace paragraphs with text and newlines
+        $html = preg_replace('/<p[^>]*>(.*?)<\/p>/is', "$1\n\n", $html);
+
+        // Replace list items with bullet points
+        $html = preg_replace('/<li[^>]*>(.*?)<\/li>/is', "• $1\n", $html);
+
+        // Replace ordered list items (simple approach - numbered)
+        $counter = 0;
+        $html = preg_replace_callback('/<ol[^>]*>(.*?)<\/ol>/is', function ($matches) use (&$counter) {
+            $counter = 0;
+
+            return preg_replace_callback('/<li[^>]*>(.*?)<\/li>/is', function ($m) use (&$counter) {
+                $counter++;
+
+                return "{$counter}. {$m[1]}\n";
+            }, $matches[1]);
+        }, $html);
+
+        // Remove list wrapper tags
+        $html = preg_replace('/<\/?[uo]l[^>]*>/i', '', $html);
+
+        // Replace blockquotes with indented text
+        $html = preg_replace('/<blockquote[^>]*>(.*?)<\/blockquote>/is', "> $1\n", $html);
+
+        // Replace code blocks with text
+        $html = preg_replace('/<pre[^>]*>(.*?)<\/pre>/is', "```\n$1\n```\n", $html);
+        $html = preg_replace('/<code[^>]*>(.*?)<\/code>/is', '`$1`', $html);
+
+        // Replace line breaks
+        $html = preg_replace('/<br\s*\/?>/i', "\n", $html);
+
+        // Handle text formatting (just remove the tags, keep content)
+        $html = preg_replace('/<(strong|b)[^>]*>(.*?)<\/\1>/is', '$2', $html);
+        $html = preg_replace('/<(em|i)[^>]*>(.*?)<\/\1>/is', '$2', $html);
+        $html = preg_replace('/<(s|strike|del)[^>]*>(.*?)<\/\1>/is', '$2', $html);
+        $html = preg_replace('/<(u)[^>]*>(.*?)<\/\1>/is', '$2', $html);
+
+        // Remove any remaining HTML tags
+        $html = strip_tags($html);
+
+        // Decode HTML entities
+        $html = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Clean up excessive whitespace
+        $html = preg_replace('/\n{3,}/', "\n\n", $html); // Max 2 consecutive newlines
+        $html = preg_replace('/[ \t]+/', ' ', $html); // Multiple spaces to single space
+        $html = preg_replace('/^\s+|\s+$/m', '', $html); // Trim each line
+
+        return trim($html);
     }
 
     protected function calculateCustomOffset(\Carbon\Carbon $now, array $config): \Carbon\Carbon
@@ -482,7 +557,16 @@ class WorkflowRunnerService
 
     protected function executeApiAction(array $config, array $inputValues): array
     {
+        // Replace placeholders in URL if dynamic
         $url = $config['url'] ?? null;
+        $dynamicFields = $config['dynamicFields'] ?? [];
+
+        if (! empty($dynamicFields['url']) && isset($inputValues['url'])) {
+            $url = $inputValues['url'];
+        } elseif ($url) {
+            // Also replace any placeholders in the URL
+            $url = $this->replaceStringPlaceholders($url, $inputValues);
+        }
 
         if (! $url) {
             return ['success' => false, 'error' => 'API Action requires a URL'];
@@ -491,6 +575,35 @@ class WorkflowRunnerService
         $method = strtoupper($config['method'] ?? 'GET');
         $headers = $config['headers'] ?? [];
         $body = $config['requestBody'] ?? [];
+        $authToken = $config['authToken'] ?? null;
+
+        // Handle dynamic headers
+        if (! empty($dynamicFields['headers']) && isset($inputValues['headers'])) {
+            $dynamicHeaders = $inputValues['headers'];
+            if (is_string($dynamicHeaders)) {
+                $dynamicHeaders = json_decode($dynamicHeaders, true) ?? [];
+            }
+            $headers = array_merge($headers, $dynamicHeaders);
+        }
+
+        // Handle dynamic auth token
+        if (! empty($dynamicFields['authToken']) && isset($inputValues['authToken'])) {
+            $authToken = $inputValues['authToken'];
+        }
+
+        // Add auth token to headers if set
+        if ($authToken) {
+            $headers['Authorization'] = str_starts_with($authToken, 'Bearer ') ? $authToken : "Bearer {$authToken}";
+        }
+
+        // Handle dynamic request body
+        if (! empty($dynamicFields['requestBody']) && isset($inputValues['requestBody'])) {
+            $dynamicBody = $inputValues['requestBody'];
+            if (is_string($dynamicBody)) {
+                $dynamicBody = json_decode($dynamicBody, true) ?? [];
+            }
+            $body = $dynamicBody;
+        }
 
         // Replace placeholders with input values
         $body = $this->replacePlaceholders($body, $inputValues);
@@ -509,15 +622,83 @@ class WorkflowRunnerService
 
             $this->log('info', "API {$method} {$url} - Status: {$response->status()}");
 
+            $responseData = $response->json() ?? $response->body();
+
+            // Extract specific field if outputField is set
+            $outputField = $config['outputField'] ?? null;
+            if ($outputField && is_array($responseData)) {
+                $responseData = $this->getNestedValue($responseData, $outputField);
+            }
+
+            // Apply response mappings if defined
+            $responseMapping = $config['responseMapping'] ?? [];
+            if (! empty($responseMapping) && is_array($response->json())) {
+                $mappedOutput = [];
+                $originalResponse = $response->json();
+
+                foreach ($responseMapping as $mapping) {
+                    $path = $mapping['path'] ?? '';
+                    $alias = $mapping['alias'] ?? $path;
+
+                    if ($path) {
+                        $value = $this->getNestedValue($originalResponse, $path);
+                        $mappedOutput[$alias] = $value;
+                    }
+                }
+
+                // If we have mappings, include them in the output
+                if (! empty($mappedOutput)) {
+                    $responseData = is_array($responseData)
+                        ? array_merge($responseData, ['_mapped' => $mappedOutput])
+                        : ['_original' => $responseData, '_mapped' => $mappedOutput];
+                }
+            }
+
             return [
                 'success' => $response->successful(),
-                'output' => $response->json() ?? $response->body(),
+                'output' => $responseData,
                 'statusCode' => $response->status(),
             ];
 
         } catch (\Exception $e) {
             return ['success' => false, 'error' => "API request failed: {$e->getMessage()}"];
         }
+    }
+
+    /**
+     * Get a nested value from an array using dot notation.
+     */
+    protected function getNestedValue(array $array, string $path): mixed
+    {
+        $keys = explode('.', $path);
+        $value = $array;
+
+        foreach ($keys as $key) {
+            if (is_array($value) && array_key_exists($key, $value)) {
+                $value = $value[$key];
+            } elseif (is_array($value) && is_numeric($key) && isset($value[(int) $key])) {
+                $value = $value[(int) $key];
+            } else {
+                return null;
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * Replace placeholders in a string with values.
+     */
+    protected function replaceStringPlaceholders(string $string, array $values): string
+    {
+        foreach ($values as $key => $value) {
+            if (is_scalar($value)) {
+                $string = str_replace("{{{$key}}}", (string) $value, $string);
+                $string = str_replace("{{{input.$key}}}", (string) $value, $string);
+            }
+        }
+
+        return $string;
     }
 
     protected function executeEmailAction(array $config, array $inputValues): array
@@ -665,9 +846,13 @@ class WorkflowRunnerService
 
         $operation = $config['operation'] ?? 'create';
         $calendarId = $config['calendarId'] ?? 'primary';
+        $dynamicFields = $config['dynamicFields'] ?? [];
+        $dynamicFieldPaths = $config['dynamicFieldPaths'] ?? [];
 
         $configAfterPlaceholders = $this->replacePlaceholders($config, $inputValues);
         $this->log('info', 'Config after placeholder replacement: '.json_encode($configAfterPlaceholders));
+        $this->log('info', 'Dynamic fields config: '.json_encode($dynamicFields));
+        $this->log('info', 'Dynamic field paths config: '.json_encode($dynamicFieldPaths));
 
         // Check if we have a connected Calendar event object (from previous Calendar node)
         // If so, extract the id for eventId
@@ -689,6 +874,74 @@ class WorkflowRunnerService
         $endDateTime = $inputValues['endDateTime'] ?? $configAfterPlaceholders['endDateTime'] ?? null;
         $attendees = $inputValues['attendees'] ?? $configAfterPlaceholders['attendees'] ?? '';
         $eventId = $eventIdFromInput ?? $configAfterPlaceholders['eventId'] ?? '';
+
+        // Handle dynamic fields from connected action nodes (API, etc.)
+        if (isset($inputValues['input']) && is_array($inputValues['input'])) {
+            $inputData = $inputValues['input'];
+            $mappedData = $inputData['_mapped'] ?? [];
+
+            if (! empty($dynamicFields['summary'])) {
+                if (! empty($dynamicFieldPaths['summary'])) {
+                    $extractedValue = $this->getNestedValue($inputData, $dynamicFieldPaths['summary']);
+                    $summary = is_string($extractedValue) ? $extractedValue : ($extractedValue !== null ? json_encode($extractedValue) : $summary);
+                    $this->log('info', 'Using dynamic summary from path '.$dynamicFieldPaths['summary'].': '.$summary);
+                } else {
+                    $summary = $mappedData['summary'] ?? $inputData['summary'] ?? $inputData['title'] ?? $inputData['name'] ?? $summary;
+                    $this->log('info', 'Using auto-detected dynamic summary: '.$summary);
+                }
+            }
+            if (! empty($dynamicFields['description'])) {
+                if (! empty($dynamicFieldPaths['description'])) {
+                    $extractedValue = $this->getNestedValue($inputData, $dynamicFieldPaths['description']);
+                    $description = is_string($extractedValue) ? $extractedValue : ($extractedValue !== null ? json_encode($extractedValue, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : $description);
+                    $this->log('info', 'Using dynamic description from path '.$dynamicFieldPaths['description']);
+                } else {
+                    $description = $mappedData['description'] ?? $inputData['description'] ?? $inputData['body'] ?? $inputData['content'] ?? (is_array($inputData) ? json_encode($inputData) : $description);
+                    $this->log('info', 'Using auto-detected dynamic description');
+                }
+            }
+            if (! empty($dynamicFields['location'])) {
+                if (! empty($dynamicFieldPaths['location'])) {
+                    $extractedValue = $this->getNestedValue($inputData, $dynamicFieldPaths['location']);
+                    $location = is_string($extractedValue) ? $extractedValue : ($extractedValue !== null ? json_encode($extractedValue) : $location);
+                    $this->log('info', 'Using dynamic location from path '.$dynamicFieldPaths['location'].': '.$location);
+                } else {
+                    $location = $mappedData['location'] ?? $inputData['location'] ?? $inputData['address'] ?? $location;
+                    $this->log('info', 'Using auto-detected dynamic location: '.$location);
+                }
+            }
+            if (! empty($dynamicFields['startDateTime'])) {
+                if (! empty($dynamicFieldPaths['startDateTime'])) {
+                    $extractedValue = $this->getNestedValue($inputData, $dynamicFieldPaths['startDateTime']);
+                    $startDateTime = is_string($extractedValue) ? $extractedValue : ($extractedValue !== null ? json_encode($extractedValue) : $startDateTime);
+                    $this->log('info', 'Using dynamic startDateTime from path '.$dynamicFieldPaths['startDateTime'].': '.$startDateTime);
+                } else {
+                    $startDateTime = $mappedData['startDateTime'] ?? $inputData['startDateTime'] ?? $inputData['start'] ?? $inputData['date'] ?? $startDateTime;
+                    $this->log('info', 'Using auto-detected dynamic startDateTime: '.$startDateTime);
+                }
+            }
+            if (! empty($dynamicFields['endDateTime'])) {
+                if (! empty($dynamicFieldPaths['endDateTime'])) {
+                    $extractedValue = $this->getNestedValue($inputData, $dynamicFieldPaths['endDateTime']);
+                    $endDateTime = is_string($extractedValue) ? $extractedValue : ($extractedValue !== null ? json_encode($extractedValue) : $endDateTime);
+                    $this->log('info', 'Using dynamic endDateTime from path '.$dynamicFieldPaths['endDateTime'].': '.$endDateTime);
+                } else {
+                    $endDateTime = $mappedData['endDateTime'] ?? $inputData['endDateTime'] ?? $inputData['end'] ?? $endDateTime;
+                    $this->log('info', 'Using auto-detected dynamic endDateTime: '.$endDateTime);
+                }
+            }
+            if (! empty($dynamicFields['attendees'])) {
+                if (! empty($dynamicFieldPaths['attendees'])) {
+                    $extractedValue = $this->getNestedValue($inputData, $dynamicFieldPaths['attendees']);
+                    $attendees = is_array($extractedValue) ? implode(', ', $extractedValue) : (is_string($extractedValue) ? $extractedValue : $attendees);
+                    $this->log('info', 'Using dynamic attendees from path '.$dynamicFieldPaths['attendees'].': '.$attendees);
+                } else {
+                    $attendeesData = $mappedData['attendees'] ?? $inputData['attendees'] ?? $inputData['emails'] ?? $attendees;
+                    $attendees = is_array($attendeesData) ? implode(', ', $attendeesData) : $attendeesData;
+                    $this->log('info', 'Using auto-detected dynamic attendees: '.$attendees);
+                }
+            }
+        }
 
         // Check for unreplaced placeholders and clear them
         $checkAndClear = function ($value) {
@@ -820,8 +1073,19 @@ class WorkflowRunnerService
         }
 
         $operation = $config['operation'] ?? 'create';
+        $dynamicFields = $config['dynamicFields'] ?? [];
+        $dynamicFieldPaths = $config['dynamicFieldPaths'] ?? [];
         $configAfterPlaceholders = $this->replacePlaceholders($config, $inputValues);
         $this->log('info', 'Config after placeholder replacement: '.json_encode($configAfterPlaceholders));
+        $this->log('info', 'Dynamic fields config: '.json_encode($dynamicFields));
+        $this->log('info', 'Dynamic field paths config: '.json_encode($dynamicFieldPaths));
+        $this->log('info', 'Input values keys: '.json_encode(array_keys($inputValues)));
+        if (isset($inputValues['input'])) {
+            $this->log('info', 'Input data type: '.gettype($inputValues['input']));
+            if (is_array($inputValues['input'])) {
+                $this->log('info', 'Input data keys: '.json_encode(array_keys($inputValues['input'])));
+            }
+        }
 
         // Check if we have a connected Docs document object (from previous Docs node)
         $documentIdFromInput = $inputValues['documentId'] ?? null;
@@ -832,10 +1096,49 @@ class WorkflowRunnerService
             }
         }
 
-        // Use input values from connected nodes if available
+        // Handle dynamic fields from connected action nodes (API, Calendar, etc.)
+        // When a field is set to dynamic mode, use the input from the connected node
         $title = $inputValues['title'] ?? $configAfterPlaceholders['title'] ?? 'Untitled';
         $content = $inputValues['content'] ?? $configAfterPlaceholders['content'] ?? '';
         $documentId = $documentIdFromInput ?? $configAfterPlaceholders['documentId'] ?? '';
+
+        // If dynamicFields.title is true and we have input from a connected action node
+        if (! empty($dynamicFields['title']) && isset($inputValues['input'])) {
+            $inputData = $inputValues['input'];
+            if (is_string($inputData)) {
+                $title = $inputData;
+            } elseif (is_array($inputData)) {
+                // If user specified a path, use it
+                if (! empty($dynamicFieldPaths['title'])) {
+                    $extractedValue = $this->getNestedValue($inputData, $dynamicFieldPaths['title']);
+                    $title = is_string($extractedValue) ? $extractedValue : ($extractedValue !== null ? json_encode($extractedValue) : $title);
+                    $this->log('info', 'Using dynamic title from path '.$dynamicFieldPaths['title'].': '.$title);
+                } else {
+                    // Auto-detect: try common field names
+                    $title = $inputData['_mapped']['title'] ?? $inputData['title'] ?? $inputData['name'] ?? json_encode($inputData);
+                    $this->log('info', 'Using auto-detected dynamic title: '.$title);
+                }
+            }
+        }
+
+        // If dynamicFields.content is true and we have input from a connected action node
+        if (! empty($dynamicFields['content']) && isset($inputValues['input'])) {
+            $inputData = $inputValues['input'];
+            if (is_string($inputData)) {
+                $content = $inputData;
+            } elseif (is_array($inputData)) {
+                // If user specified a path, use it
+                if (! empty($dynamicFieldPaths['content'])) {
+                    $extractedValue = $this->getNestedValue($inputData, $dynamicFieldPaths['content']);
+                    $content = is_string($extractedValue) ? $extractedValue : ($extractedValue !== null ? json_encode($extractedValue, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : $content);
+                    $this->log('info', 'Using dynamic content from path '.$dynamicFieldPaths['content']);
+                } else {
+                    // Auto-detect: try common field names
+                    $content = $inputData['_mapped']['content'] ?? $inputData['content'] ?? $inputData['body'] ?? $inputData['text'] ?? json_encode($inputData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                    $this->log('info', 'Using auto-detected dynamic content');
+                }
+            }
+        }
 
         // Check for unreplaced placeholders and clear them
         $checkAndClear = function ($value) {
@@ -922,11 +1225,44 @@ class WorkflowRunnerService
     {
         array_walk_recursive($data, function (&$item) use ($values) {
             if (is_string($item)) {
+                // First, replace simple placeholders
                 foreach ($values as $key => $value) {
-                    // Support both {{{key}}} and {{{input.key}}} patterns
-                    $item = str_replace("{{{$key}}}", (string) $value, $item);
-                    $item = str_replace("{{{input.$key}}}", (string) $value, $item);
+                    if (is_scalar($value)) {
+                        // Support both {{{key}}} and {{{input.key}}} patterns
+                        $item = str_replace("{{{$key}}}", (string) $value, $item);
+                        $item = str_replace("{{{input.$key}}}", (string) $value, $item);
+                    }
                 }
+
+                // Then, handle dot notation for nested access (e.g., {{{input.data.user.name}}})
+                $item = preg_replace_callback('/\{\{\{input\.([a-zA-Z0-9_.]+)\}\}\}/', function ($matches) use ($values) {
+                    $path = $matches[1];
+                    $input = $values['input'] ?? null;
+
+                    if (is_array($input)) {
+                        $value = $this->getNestedValue($input, $path);
+                        if ($value !== null && is_scalar($value)) {
+                            return (string) $value;
+                        }
+                    }
+
+                    return $matches[0]; // Return original if not found
+                }, $item);
+
+                // Also handle {{{_mapped.fieldName}}} for accessing mapped fields
+                $item = preg_replace_callback('/\{\{\{_mapped\.([a-zA-Z0-9_]+)\}\}\}/', function ($matches) use ($values) {
+                    $fieldName = $matches[1];
+                    $input = $values['input'] ?? null;
+
+                    if (is_array($input) && isset($input['_mapped'][$fieldName])) {
+                        $value = $input['_mapped'][$fieldName];
+                        if (is_scalar($value)) {
+                            return (string) $value;
+                        }
+                    }
+
+                    return $matches[0]; // Return original if not found
+                }, $item);
             }
         });
 

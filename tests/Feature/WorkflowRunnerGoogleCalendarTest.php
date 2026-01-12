@@ -168,7 +168,7 @@ describe('executeGoogleCalendarAction', function () {
         $this->mock(GoogleCalendarService::class, function ($mock) {
             $mock->shouldReceive('deleteEvent')
                 ->once()
-                ->andReturn(true);
+                ->andReturn(['success' => true, 'eventId' => 'event-to-delete']);
         });
 
         WorkflowNode::factory()->for($this->workflow)->create([
@@ -202,7 +202,7 @@ describe('executeGoogleCalendarAction', function () {
         $result = $runner->execute($this->workflow->fresh());
 
         expect($result['success'])->toBeTrue();
-        expect($result['outputs']['calendar-1'])->toBeTrue();
+        expect($result['outputs']['calendar-1'])->toHaveKey('success', true);
     });
 });
 

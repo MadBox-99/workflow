@@ -208,17 +208,146 @@ class GoogleDocsService
         $document = $service->documents->get($documentId);
         $endIndex = $this->getDocumentEndIndex($document);
 
-        $requests = [
-            new Request([
-                'insertText' => [
-                    'location' => ['index' => $endIndex],
-                    'text' => $content,
-                ],
-            ]),
-        ];
+        // Parse content for structured formatting (headings, lists, etc.)
+        $structuredContent = $this->parseStructuredContent($content);
+
+        if (empty($structuredContent['text'])) {
+            return;
+        }
+
+        $requests = [];
+
+        // First, insert all the text at once
+        $requests[] = new Request([
+            'insertText' => [
+                'location' => ['index' => $endIndex],
+                'text' => $structuredContent['text'],
+            ],
+        ]);
+
+        // Apply formatting styles for headings
+        // Note: Requests are processed in reverse order for styling to work correctly
+        foreach (array_reverse($structuredContent['styles']) as $style) {
+            $startIndex = $endIndex + $style['start'];
+            $endStyleIndex = $endIndex + $style['end'];
+
+            if ($style['type'] === 'heading') {
+                $requests[] = new Request([
+                    'updateParagraphStyle' => [
+                        'range' => [
+                            'startIndex' => $startIndex,
+                            'endIndex' => $endStyleIndex,
+                        ],
+                        'paragraphStyle' => [
+                            'namedStyleType' => $style['level'], // HEADING_1, HEADING_2, etc.
+                        ],
+                        'fields' => 'namedStyleType',
+                    ],
+                ]);
+            } elseif ($style['type'] === 'bullet') {
+                $requests[] = new Request([
+                    'createParagraphBullets' => [
+                        'range' => [
+                            'startIndex' => $startIndex,
+                            'endIndex' => $endStyleIndex,
+                        ],
+                        'bulletPreset' => 'BULLET_DISC_CIRCLE_SQUARE',
+                    ],
+                ]);
+            }
+        }
 
         $batchRequest = new BatchUpdateDocumentRequest(['requests' => $requests]);
         $service->documents->batchUpdate($documentId, $batchRequest);
+    }
+
+    /**
+     * Parse content and extract structured formatting information.
+     * Supports: headings (H1, H2, H3), bullet lists, paragraphs.
+     */
+    protected function parseStructuredContent(string $content): array
+    {
+        $text = '';
+        $styles = [];
+
+        // Check if content has HTML tags
+        if (! preg_match('/<[^>]+>/', $content)) {
+            // Plain text, no formatting needed
+            return ['text' => $content, 'styles' => []];
+        }
+
+        // Track current position in output text
+        $position = 0;
+
+        // Process headings first - extract and mark positions
+        // H1
+        $content = preg_replace_callback('/<h1[^>]*>(.*?)<\/h1>/is', function ($matches) use (&$text, &$styles, &$position) {
+            $heading = strip_tags($matches[1]);
+            $start = $position;
+            $text .= $heading."\n";
+            $position = \strlen($text);
+            $styles[] = ['type' => 'heading', 'level' => 'HEADING_1', 'start' => $start, 'end' => $position];
+
+            return ''; // Remove from content
+        }, $content);
+
+        // H2
+        $content = preg_replace_callback('/<h2[^>]*>(.*?)<\/h2>/is', function ($matches) use (&$text, &$styles, &$position) {
+            $heading = strip_tags($matches[1]);
+            $start = $position;
+            $text .= $heading."\n";
+            $position = \strlen($text);
+            $styles[] = ['type' => 'heading', 'level' => 'HEADING_2', 'start' => $start, 'end' => $position];
+
+            return '';
+        }, $content);
+
+        // H3
+        $content = preg_replace_callback('/<h3[^>]*>(.*?)<\/h3>/is', function ($matches) use (&$text, &$styles, &$position) {
+            $heading = strip_tags($matches[1]);
+            $start = $position;
+            $text .= $heading."\n";
+            $position = \strlen($text);
+            $styles[] = ['type' => 'heading', 'level' => 'HEADING_3', 'start' => $start, 'end' => $position];
+
+            return '';
+        }, $content);
+
+        // Process unordered lists
+        $content = preg_replace_callback('/<ul[^>]*>(.*?)<\/ul>/is', function ($matches) use (&$text, &$styles, &$position) {
+            preg_match_all('/<li[^>]*>(.*?)<\/li>/is', $matches[1], $items);
+            foreach ($items[1] as $item) {
+                $itemText = strip_tags($item);
+                $start = $position;
+                $text .= $itemText."\n";
+                $position = \strlen($text);
+                $styles[] = ['type' => 'bullet', 'start' => $start, 'end' => $position];
+            }
+
+            return '';
+        }, $content);
+
+        // Process paragraphs
+        $content = preg_replace_callback('/<p[^>]*>(.*?)<\/p>/is', function ($matches) use (&$text, &$position) {
+            $para = strip_tags($matches[1]);
+            if (! empty(trim($para))) {
+                $text .= $para."\n\n";
+                $position = \strlen($text);
+            }
+
+            return '';
+        }, $content);
+
+        // Process remaining content (stripped of tags)
+        $remaining = trim(strip_tags($content));
+        if (! empty($remaining)) {
+            $text .= $remaining."\n";
+        }
+
+        // Clean up excessive newlines
+        $text = preg_replace('/\n{3,}/', "\n\n", $text);
+
+        return ['text' => trim($text)."\n", 'styles' => $styles];
     }
 
     protected function getDocumentEndIndex(Document $document): int

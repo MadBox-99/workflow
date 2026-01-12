@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { useEditor, EditorContent, ReactRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -174,15 +174,23 @@ const RichTextEditor = ({
     placeholder = 'Start typing...',
     availableNodes = [], // Array of { id, label, type, color, fields }
 }) => {
-    // Build mention items from available nodes
+    // Use a ref to store mention items - this prevents editor recreation when availableNodes change
+    const mentionItemsRef = useRef([]);
+
+    // Build mention items from available nodes and update the ref
     const mentionItems = useMemo(() => {
         const items = [];
+        if (!Array.isArray(availableNodes)) return items;
+
         availableNodes.forEach(node => {
+            // Skip undefined/null nodes
+            if (!node || !node.id) return;
+
             // Add node output as a mention option
             items.push({
                 id: `${node.id}`,
                 label: node.label || node.id,
-                type: node.type,
+                type: node.type || 'unknown',
                 color: node.color || '#8b5cf6',
                 nodeId: node.id,
                 field: 'output',
@@ -190,10 +198,11 @@ const RichTextEditor = ({
             // If node has specific fields, add them too
             if (node.fields && Array.isArray(node.fields)) {
                 node.fields.forEach(field => {
+                    if (!field || !field.value) return;
                     items.push({
                         id: `${node.id}.${field.value}`,
-                        label: `${node.label || node.id} → ${field.label}`,
-                        type: node.type,
+                        label: `${node.label || node.id} → ${field.label || field.value}`,
+                        type: node.type || 'unknown',
                         color: node.color || '#8b5cf6',
                         nodeId: node.id,
                         field: field.value,
@@ -204,9 +213,16 @@ const RichTextEditor = ({
         return items;
     }, [availableNodes]);
 
+    // Keep the ref updated with current items
+    useEffect(() => {
+        mentionItemsRef.current = mentionItems;
+    }, [mentionItems]);
+
+    // Suggestion config reads from ref so it doesn't need to change when items change
     const suggestion = useMemo(() => ({
         items: ({ query }) => {
-            return mentionItems.filter(item =>
+            // Read from ref to get current items without causing editor recreation
+            return mentionItemsRef.current.filter(item =>
                 item.label.toLowerCase().includes(query.toLowerCase())
             ).slice(0, 10);
         },
@@ -263,7 +279,7 @@ const RichTextEditor = ({
                 },
             };
         },
-    }), [mentionItems]);
+    }), []); // Empty deps - reads from ref instead
 
     const editor = useEditor({
         extensions: [
@@ -280,12 +296,22 @@ const RichTextEditor = ({
                     class: 'mention',
                 },
                 suggestion,
-                renderLabel({ node }) {
-                    return `@${node.attrs.label ?? node.attrs.id}`;
+                renderText({ node }) {
+                    const label = node?.attrs?.label || node?.attrs?.id || '';
+                    return `@${label}`;
+                },
+                renderHTML({ node, HTMLAttributes }) {
+                    const label = node?.attrs?.label || node?.attrs?.id || '';
+                    return [
+                        'span',
+                        { ...(HTMLAttributes || {}), class: 'mention' },
+                        `@${label}`,
+                    ];
                 },
             }),
         ],
         content: value || '',
+        immediatelyRender: false, // Prevent race condition during initialization
         onUpdate: ({ editor }) => {
             // Get HTML content
             const html = editor.getHTML();
@@ -298,7 +324,7 @@ const RichTextEditor = ({
                 class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[100px] p-3',
             },
         },
-    }, [suggestion]);
+    }, []); // Empty deps - stable editor instance, reads from refs
 
     // Update content when value changes externally
     React.useEffect(() => {

@@ -1,6 +1,170 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { getFieldsForNodeTypes } from '@/constants/nodeInputFields';
 import RichTextEditor from '@/components/ui/RichTextEditor';
+
+// Modal Editor Component for full-screen rich text editing
+const RichTextModal = ({ isOpen, onClose, value, onChange, onSave, availableNodes }) => {
+    const [tempValue, setTempValue] = useState(value);
+
+    // Sync tempValue when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setTempValue(value);
+        }
+    }, [isOpen, value]);
+
+    const handleSave = () => {
+        onChange(tempValue);
+        onSave?.();
+        onClose();
+    };
+
+    const handleCancel = () => {
+        setTempValue(value); // Reset to original value
+        onClose();
+    };
+
+    // Handle Escape key
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && isOpen) {
+                handleCancel();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    return createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center" data-modal-open="true">
+            {/* Backdrop */}
+            <div
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                onClick={handleCancel}
+            />
+
+            {/* Modal */}
+            <div className="relative w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-2xl">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                            <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                Rich Text Editor
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Edit your formatted content in full screen
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleCancel}
+                        className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                {/* Editor Content */}
+                <div className="flex-1 overflow-auto p-6">
+                    <div className="min-h-[400px] [&_.ProseMirror]:min-h-[350px] [&_.ProseMirror]:max-h-[500px]">
+                        <RichTextEditor
+                            value={tempValue}
+                            onChange={setTempValue}
+                            placeholder="Enter your formatted content... Type @ to reference other nodes"
+                            availableNodes={availableNodes}
+                        />
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-b-xl">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                        Press <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono">Esc</kbd> to cancel
+                    </div>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={handleCancel}
+                            className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+};
+
+// Simple HTML to plaintext preview (client-side approximation)
+const htmlToPlaintextPreview = (html) => {
+    if (!html) return '';
+
+    let text = html;
+
+    // Process mentions
+    text = text.replace(/<span[^>]*data-type="mention"[^>]*>([^<]*)<\/span>/gi, '$1');
+
+    // Headings
+    text = text.replace(/<h[1-3][^>]*>(.*?)<\/h[1-3]>/gis, '\n$1\n\n');
+
+    // Paragraphs
+    text = text.replace(/<p[^>]*>(.*?)<\/p>/gis, '$1\n\n');
+
+    // List items
+    text = text.replace(/<li[^>]*>(.*?)<\/li>/gis, '• $1\n');
+
+    // Remove list wrappers
+    text = text.replace(/<\/?[uo]l[^>]*>/gi, '');
+
+    // Blockquotes
+    text = text.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gis, '> $1\n');
+
+    // Code blocks
+    text = text.replace(/<pre[^>]*>(.*?)<\/pre>/gis, '```\n$1\n```\n');
+    text = text.replace(/<code[^>]*>(.*?)<\/code>/gis, '`$1`');
+
+    // Line breaks
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+
+    // Remove formatting tags
+    text = text.replace(/<(strong|b|em|i|s|strike|del|u)[^>]*>(.*?)<\/\1>/gis, '$2');
+
+    // Remove remaining HTML tags
+    text = text.replace(/<[^>]+>/g, '');
+
+    // Decode entities
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    text = textarea.value;
+
+    // Clean up whitespace
+    text = text.replace(/\n{3,}/g, '\n\n');
+    text = text.replace(/[ \t]+/g, ' ');
+    text = text.split('\n').map(line => line.trim()).join('\n');
+
+    return text.trim();
+};
 
 const DATETIME_OPTIONS = [
     { value: 'now', label: 'Now (current time)', description: 'Current date and time' },
@@ -46,6 +210,8 @@ const ConstantNodeConfig = ({ config, onChange, connectedNodeTypes = [], nodes =
     const [offsetUnit, setOffsetUnit] = useState(config.offsetUnit || 'hours');
     const [fixedDateTime, setFixedDateTime] = useState(config.fixedDateTime || '');
     const [targetField, setTargetField] = useState(config.targetField || '');
+    const [outputFormat, setOutputFormat] = useState(config.outputFormat || 'html');
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Sync local state with config prop when it changes (e.g., selecting a different node)
     useEffect(() => {
@@ -56,6 +222,7 @@ const ConstantNodeConfig = ({ config, onChange, connectedNodeTypes = [], nodes =
         setOffsetUnit(config.offsetUnit || 'hours');
         setFixedDateTime(config.fixedDateTime || '');
         setTargetField(config.targetField || '');
+        setOutputFormat(config.outputFormat || 'html');
     }, [config]);
 
     useEffect(() => {
@@ -76,8 +243,12 @@ const ConstantNodeConfig = ({ config, onChange, connectedNodeTypes = [], nodes =
             }
         }
 
+        if (valueType === 'richtext') {
+            configData.outputFormat = outputFormat;
+        }
+
         onChange(configData);
-    }, [valueType, value, datetimeOption, offsetAmount, offsetUnit, fixedDateTime, targetField]);
+    }, [valueType, value, datetimeOption, offsetAmount, offsetUnit, fixedDateTime, targetField, outputFormat]);
 
     const convertValue = (val, type) => {
         if (type === 'number') {
@@ -310,12 +481,50 @@ const ConstantNodeConfig = ({ config, onChange, connectedNodeTypes = [], nodes =
                             step="any"
                         />
                     ) : valueType === 'richtext' ? (
-                        <RichTextEditor
-                            value={value}
-                            onChange={setValue}
-                            placeholder="Enter formatted content... Type @ to reference other nodes"
-                            availableNodes={availableNodesForMention}
-                        />
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-xs font-medium mb-1.5 text-gray-600 dark:text-gray-400">
+                                    Output Format
+                                </label>
+                                <select
+                                    value={outputFormat}
+                                    onChange={(e) => setOutputFormat(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                >
+                                    <option value="html">HTML (preserve formatting tags)</option>
+                                    <option value="plaintext">Plain Text (for Google Docs, etc.)</option>
+                                </select>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {outputFormat === 'html'
+                                        ? 'Output will include HTML tags like <p>, <h1>, <strong>, etc.'
+                                        : 'HTML will be converted to formatted plain text with proper line breaks and structure.'
+                                    }
+                                </p>
+                            </div>
+                            <RichTextEditor
+                                value={value}
+                                onChange={setValue}
+                                placeholder="Enter formatted content... Type @ to reference other nodes"
+                                availableNodes={availableNodesForMention}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setIsModalOpen(true)}
+                                className="w-full px-3 py-2 text-sm bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-700 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                                </svg>
+                                Open Full Screen Editor
+                            </button>
+                            <RichTextModal
+                                isOpen={isModalOpen}
+                                onClose={() => setIsModalOpen(false)}
+                                value={value}
+                                onChange={setValue}
+                                availableNodes={availableNodesForMention}
+                            />
+                        </div>
                     ) : (
                         <textarea
                             value={value}
@@ -333,10 +542,16 @@ const ConstantNodeConfig = ({ config, onChange, connectedNodeTypes = [], nodes =
                     {valueType === 'datetime' ? 'Preview (calculated at runtime):' : 'Current Value:'}
                 </p>
                 {valueType === 'richtext' ? (
-                    <div
-                        className="text-sm text-purple-800 dark:text-purple-400 prose prose-sm dark:prose-invert max-w-none [&_*]:my-1"
-                        dangerouslySetInnerHTML={{ __html: value || '<em>Empty</em>' }}
-                    />
+                    outputFormat === 'plaintext' ? (
+                        <pre className="text-sm text-purple-800 dark:text-purple-400 whitespace-pre-wrap font-sans">
+                            {htmlToPlaintextPreview(value) || 'Empty'}
+                        </pre>
+                    ) : (
+                        <div
+                            className="text-sm text-purple-800 dark:text-purple-400 prose prose-sm dark:prose-invert max-w-none [&_*]:my-1"
+                            dangerouslySetInnerHTML={{ __html: value || '<em>Empty</em>' }}
+                        />
+                    )
                 ) : (
                     <p className="text-sm text-purple-800 dark:text-purple-400 font-mono break-all">
                         {valueType === 'string' && `"${value}"`}
@@ -351,7 +566,9 @@ const ConstantNodeConfig = ({ config, onChange, connectedNodeTypes = [], nodes =
                         <span className="ml-2 text-green-600 dark:text-green-400">(dynamic - recalculated each run)</span>
                     )}
                     {valueType === 'richtext' && (
-                        <span className="ml-2 text-blue-600 dark:text-blue-400">(HTML formatted)</span>
+                        <span className="ml-2 text-blue-600 dark:text-blue-400">
+                            ({outputFormat === 'html' ? 'HTML formatted' : 'Plain text output'})
+                        </span>
                     )}
                 </p>
             </div>

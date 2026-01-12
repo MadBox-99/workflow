@@ -1,5 +1,82 @@
 import { useCallback, useState } from 'react';
 
+// Helper to get nested value from object using dot notation path
+const getNestedValue = (obj, path) => {
+    if (!obj || !path) return undefined;
+    const keys = path.split('.');
+    let value = obj;
+    for (const key of keys) {
+        if (value === null || value === undefined) return undefined;
+        if (typeof value !== 'object') return undefined;
+        value = value[key];
+    }
+    return value;
+};
+
+// Helper to parse dynamic field path configuration (supports both old string format and new { nodeId, path } format)
+const getDynamicPath = (fieldConfig) => {
+    if (!fieldConfig) return null;
+    if (typeof fieldConfig === 'string') return { nodeId: null, path: fieldConfig };
+    if (typeof fieldConfig === 'object') return { nodeId: fieldConfig.nodeId, path: fieldConfig.path };
+    return null;
+};
+
+// Convert HTML rich text to formatted plain text
+const convertHtmlToPlaintext = (html) => {
+    if (!html) return '';
+
+    let text = html;
+
+    // Process mentions - replace <span data-type="mention" ...>@Label</span> with @Label
+    text = text.replace(/<span[^>]*data-type="mention"[^>]*>([^<]*)<\/span>/gi, '$1');
+
+    // Replace headings with text and double newlines
+    text = text.replace(/<h[1-3][^>]*>(.*?)<\/h[1-3]>/gis, '\n$1\n\n');
+
+    // Replace paragraphs with text and newlines
+    text = text.replace(/<p[^>]*>(.*?)<\/p>/gis, '$1\n\n');
+
+    // Replace list items with bullet points
+    text = text.replace(/<li[^>]*>(.*?)<\/li>/gis, '• $1\n');
+
+    // Remove list wrapper tags
+    text = text.replace(/<\/?[uo]l[^>]*>/gi, '');
+
+    // Replace blockquotes with indented text
+    text = text.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gis, '> $1\n');
+
+    // Replace code blocks with text
+    text = text.replace(/<pre[^>]*>(.*?)<\/pre>/gis, '```\n$1\n```\n');
+    text = text.replace(/<code[^>]*>(.*?)<\/code>/gis, '`$1`');
+
+    // Replace line breaks
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+
+    // Handle text formatting (just remove the tags, keep content)
+    text = text.replace(/<(strong|b)[^>]*>(.*?)<\/\1>/gis, '$2');
+    text = text.replace(/<(em|i)[^>]*>(.*?)<\/\1>/gis, '$2');
+    text = text.replace(/<(s|strike|del)[^>]*>(.*?)<\/\1>/gis, '$2');
+    text = text.replace(/<(u)[^>]*>(.*?)<\/\1>/gis, '$2');
+
+    // Remove any remaining HTML tags
+    text = text.replace(/<[^>]+>/g, '');
+
+    // Decode common HTML entities
+    text = text.replace(/&nbsp;/g, ' ');
+    text = text.replace(/&amp;/g, '&');
+    text = text.replace(/&lt;/g, '<');
+    text = text.replace(/&gt;/g, '>');
+    text = text.replace(/&quot;/g, '"');
+    text = text.replace(/&#39;/g, "'");
+
+    // Clean up excessive whitespace
+    text = text.replace(/\n{3,}/g, '\n\n'); // Max 2 consecutive newlines
+    text = text.replace(/[ \t]+/g, ' '); // Multiple spaces to single space
+    text = text.split('\n').map(line => line.trim()).join('\n'); // Trim each line
+
+    return text.trim();
+};
+
 export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = null) => {
     const [isRunning, setIsRunning] = useState(false);
     const [currentNodeId, setCurrentNodeId] = useState(null);
@@ -52,6 +129,9 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     lastResponse: sourceNode.data.lastResponse,
                     finalValue: value,
                 });
+
+                // Store by node ID for multi-source selection (allows getSourceData to find specific nodes)
+                values[`__node_${sourceNode.id}`] = value;
 
                 if (targetField) {
                     // Use the targetField as the key (e.g., 'summary', 'startDateTime', 'endDateTime', etc.)
@@ -215,6 +295,13 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     return { success: true, output: formattedDate };
                 }
 
+                // Handle richtext with plaintext output format
+                if (config.valueType === 'richtext' && config.outputFormat === 'plaintext') {
+                    const plaintext = convertHtmlToPlaintext(config.value || '');
+                    console.log(`[Runner] Constant richtext -> plaintext: ${plaintext.substring(0, 100)}...`);
+                    return { success: true, output: plaintext };
+                }
+
                 return { success: true, output: config.value };
             }
 
@@ -343,7 +430,7 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     throw new Error('API Action requires a URL');
                 }
 
-                const { method = 'GET', url, requestBody = {}, headers = {} } = config;
+                const { method = 'GET', url, requestBody = {}, headers = {}, responseMapping = [] } = config;
 
                 const response = await fetch(url, {
                     method: method.toUpperCase(),
@@ -358,6 +445,25 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                 });
 
                 const data = await response.json();
+
+                // Apply responseMapping to create _mapped object for dynamic field access
+                if (responseMapping && responseMapping.length > 0 && data) {
+                    const mapped = {};
+                    responseMapping.forEach((mapping) => {
+                        if (mapping.alias && mapping.path) {
+                            const value = getNestedValue(data, mapping.path);
+                            if (value !== undefined) {
+                                mapped[mapping.alias] = value;
+                            }
+                        }
+                    });
+                    // Attach _mapped to the data object so downstream nodes can access it
+                    if (Object.keys(mapped).length > 0) {
+                        data._mapped = mapped;
+                        console.log('[Runner] Applied responseMapping, _mapped:', mapped);
+                    }
+                }
+
                 return { success: true, output: data };
             }
 
@@ -423,18 +529,63 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     }
                 }
 
+                // Get dynamic field configuration
+                const dynamicFields = config.dynamicFields || {};
+                const dynamicFieldPaths = config.dynamicFieldPaths || {};
+
                 // Use input values from connected nodes if available, otherwise fall back to config
                 // If the config value is a placeholder but no input provides it, use null (will get default on backend)
-                const summary = getValue(inputValues.summary, config.summary);
-                const description = getValue(inputValues.description, config.description);
-                const location = getValue(inputValues.location, config.location);
-                const startDateTime = getValue(inputValues.startDateTime, config.startDateTime);
-                const endDateTime = getValue(inputValues.endDateTime, config.endDateTime);
-                const attendees = getValue(inputValues.attendees, config.attendees);
+                let summary = getValue(inputValues.summary, config.summary);
+                let description = getValue(inputValues.description, config.description);
+                let location = getValue(inputValues.location, config.location);
+                let startDateTime = getValue(inputValues.startDateTime, config.startDateTime);
+                let endDateTime = getValue(inputValues.endDateTime, config.endDateTime);
+                let attendees = getValue(inputValues.attendees, config.attendees);
                 const eventId = getValue(eventIdFromInput, config.eventId);
 
+                // Handle dynamic fields from connected action node (API, etc.)
+                const inputData = inputValues.input;
+                if (inputData && typeof inputData === 'object') {
+                    // Summary
+                    if (dynamicFields.summary) {
+                        if (dynamicFieldPaths.summary) {
+                            const extracted = getNestedValue(inputData, dynamicFieldPaths.summary);
+                            if (extracted !== undefined) {
+                                summary = typeof extracted === 'string' ? extracted : JSON.stringify(extracted);
+                                console.log('[Runner] Using dynamic summary from path', dynamicFieldPaths.summary, ':', summary);
+                            }
+                        } else {
+                            summary = inputData._mapped?.summary ?? inputData.summary ?? inputData.title ?? summary;
+                        }
+                    }
+                    // Description
+                    if (dynamicFields.description) {
+                        if (dynamicFieldPaths.description) {
+                            const extracted = getNestedValue(inputData, dynamicFieldPaths.description);
+                            if (extracted !== undefined) {
+                                description = typeof extracted === 'string' ? extracted : JSON.stringify(extracted, null, 2);
+                                console.log('[Runner] Using dynamic description from path', dynamicFieldPaths.description);
+                            }
+                        } else {
+                            description = inputData._mapped?.description ?? inputData.description ?? inputData.body ?? description;
+                        }
+                    }
+                    // Location
+                    if (dynamicFields.location) {
+                        if (dynamicFieldPaths.location) {
+                            const extracted = getNestedValue(inputData, dynamicFieldPaths.location);
+                            if (extracted !== undefined) {
+                                location = typeof extracted === 'string' ? extracted : JSON.stringify(extracted);
+                            }
+                        } else {
+                            location = inputData._mapped?.location ?? inputData.location ?? location;
+                        }
+                    }
+                }
+
                 console.log('[Runner] Executing Google Calendar action:', config.operation, config.calendarId);
-                console.log('[Runner] Dynamic values from inputs (full object):', JSON.stringify(inputValues));
+                console.log('[Runner] Dynamic fields:', JSON.stringify(dynamicFields), 'Paths:', JSON.stringify(dynamicFieldPaths));
+                console.log('[Runner] Input values:', JSON.stringify(inputValues));
                 console.log('[Runner] Final values - summary:', summary, 'startDateTime:', startDateTime, 'endDateTime:', endDateTime, 'eventId:', eventId);
 
                 const calendarResponse = await fetch('/api/workflows/actions/google-calendar', {
@@ -504,6 +655,21 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     return configVal;
                 };
 
+                // Helper to get input data from specific source node or default input
+                const getSourceData = (fieldConfig, defaultInput) => {
+                    const pathConfig = getDynamicPath(fieldConfig);
+                    if (!pathConfig) return defaultInput;
+
+                    // If nodeId specified, look for that specific node's output in inputValues
+                    if (pathConfig.nodeId) {
+                        const sourceKey = `__node_${pathConfig.nodeId}`;
+                        if (inputValues[sourceKey] !== undefined) {
+                            return inputValues[sourceKey];
+                        }
+                    }
+                    return defaultInput;
+                };
+
                 // Check if we have a connected Docs document object (from previous Docs node)
                 let documentIdFromInput = inputValues.documentId;
                 if (!documentIdFromInput && inputValues.input && typeof inputValues.input === 'object') {
@@ -513,13 +679,83 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     }
                 }
 
-                const title = getValue(inputValues.title, config.title);
-                const content = getValue(inputValues.content, config.content);
+                // Get dynamic field configuration
+                const dynamicFields = config.dynamicFields || {};
+                const dynamicFieldPaths = config.dynamicFieldPaths || {};
+
+                // Extract values using dynamic field paths from API response
+                let title = getValue(inputValues.title, config.title);
+                let content = getValue(inputValues.content, config.content);
                 const documentId = getValue(documentIdFromInput, config.documentId);
 
+                // Handle dynamic title from connected action node (API, Constant, etc.)
+                if (dynamicFields.title) {
+                    const titlePathConfig = getDynamicPath(dynamicFieldPaths.title);
+                    const inputData = getSourceData(dynamicFieldPaths.title, inputValues.input);
+
+                    if (inputData !== undefined && inputData !== null) {
+                        if (typeof inputData === 'string') {
+                            title = inputData;
+                            console.log('[Runner] Using dynamic title from constant:', title);
+                        } else if (typeof inputData === 'object') {
+                            if (titlePathConfig?.path) {
+                                const extracted = getNestedValue(inputData, titlePathConfig.path);
+                                if (extracted !== undefined) {
+                                    title = typeof extracted === 'string' ? extracted : JSON.stringify(extracted);
+                                    console.log('[Runner] Using dynamic title from path', titlePathConfig.path, ':', title);
+                                }
+                            } else {
+                                // Auto-detect common field names
+                                title = inputData._mapped?.title ?? inputData.title ?? inputData.name ?? JSON.stringify(inputData);
+                                console.log('[Runner] Using auto-detected dynamic title:', title);
+                            }
+                        }
+                    }
+                }
+
+                // Handle dynamic content from connected action node (API, Constant, etc.)
+                if (dynamicFields.content) {
+                    const contentPathConfig = getDynamicPath(dynamicFieldPaths.content);
+                    const inputData = getSourceData(dynamicFieldPaths.content, inputValues.input);
+
+                    if (inputData !== undefined && inputData !== null) {
+                        if (typeof inputData === 'string') {
+                            content = inputData;
+                            console.log('[Runner] Using dynamic content from constant');
+                        } else if (typeof inputData === 'object') {
+                            if (contentPathConfig?.path) {
+                                const extracted = getNestedValue(inputData, contentPathConfig.path);
+                                if (extracted !== undefined) {
+                                    content = typeof extracted === 'string' ? extracted : JSON.stringify(extracted, null, 2);
+                                    console.log('[Runner] Using dynamic content from path', contentPathConfig.path);
+                                }
+                            } else {
+                                // Auto-detect common field names
+                                content = inputData._mapped?.content ?? inputData.content ?? inputData.body ?? inputData.text ?? JSON.stringify(inputData, null, 2);
+                                console.log('[Runner] Using auto-detected dynamic content');
+                            }
+                        }
+                    }
+                }
+
                 console.log('[Runner] Executing Google Docs action:', config.operation);
-                console.log('[Runner] Dynamic values from inputs:', JSON.stringify(inputValues));
-                console.log('[Runner] Final values - title:', title, 'content:', content, 'documentId:', documentId);
+                console.log('[Runner] Dynamic fields:', JSON.stringify(dynamicFields), 'Paths:', JSON.stringify(dynamicFieldPaths));
+                console.log('[Runner] Input values:', JSON.stringify(inputValues));
+                console.log('[Runner] Final values - title:', title, 'content:', content?.substring(0, 100), 'documentId:', documentId);
+
+                const requestBodyExec = {
+                    team_id: teamId,
+                    operation: config.operation,
+                    // Only include documentId if it's a non-empty string (required for read/update, not for create)
+                    documentId: documentId && typeof documentId === 'string' ? documentId : undefined,
+                    title: title,
+                    content: content,
+                    updateOperation: config.updateOperation,
+                    searchText: config.searchText,
+                    insertIndex: config.insertIndex,
+                    maxResults: config.maxResults,
+                };
+                console.log('[Runner] Sending Google Docs request (executeNode):', requestBodyExec);
 
                 const docsResponse = await fetch('/api/workflows/actions/google-docs', {
                     method: 'POST',
@@ -527,26 +763,18 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
                     },
-                    body: JSON.stringify({
-                        team_id: teamId,
-                        operation: config.operation,
-                        documentId: documentId,
-                        title: title,
-                        content: content,
-                        updateOperation: config.updateOperation,
-                        searchText: config.searchText,
-                        insertIndex: config.insertIndex,
-                        maxResults: config.maxResults,
-                    }),
+                    body: JSON.stringify(requestBodyExec),
                 });
 
                 const docsData = await docsResponse.json();
 
                 if (!docsResponse.ok || !docsData.success) {
+                    console.error('[Runner] Google Docs action failed (executeNode):', docsResponse.status, docsData);
                     if (docsData.errorCode === 'DOCUMENT_NOT_FOUND') {
                         console.warn('[Runner] Document not found:', docsData.error);
                     }
-                    throw new Error(docsData.error || 'Failed to execute Google Docs action');
+                    const errorMsgExec = docsData.message || docsData.error || 'Failed to execute Google Docs action';
+                    throw new Error(errorMsgExec);
                 }
 
                 console.log('[Runner] Google Docs action completed:', docsData);
@@ -625,6 +853,13 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     const formattedDate = result.toISOString();
                     console.log(`[Runner] Constant datetime: ${config.datetimeOption} -> ${formattedDate}, targetField: ${config.targetField || 'none'}`);
                     return { success: true, output: formattedDate };
+                }
+
+                // Handle richtext with plaintext output format
+                if (config.valueType === 'richtext' && config.outputFormat === 'plaintext') {
+                    const plaintext = convertHtmlToPlaintext(config.value || '');
+                    console.log(`[Runner] Constant richtext -> plaintext: ${plaintext.substring(0, 100)}...`);
+                    return { success: true, output: plaintext };
                 }
 
                 return { success: true, output: config.value };
@@ -746,17 +981,62 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     }
                 }
 
+                // Get dynamic field configuration
+                const dynamicFields = config.dynamicFields || {};
+                const dynamicFieldPaths = config.dynamicFieldPaths || {};
+
                 // Use input values from connected nodes if available, otherwise fall back to config
                 // If the config value is a placeholder but no input provides it, use null (will get default on backend)
-                const summary = getValue(inputValues.summary, config.summary);
-                const description = getValue(inputValues.description, config.description);
-                const location = getValue(inputValues.location, config.location);
-                const startDateTime = getValue(inputValues.startDateTime, config.startDateTime);
-                const endDateTime = getValue(inputValues.endDateTime, config.endDateTime);
-                const attendees = getValue(inputValues.attendees, config.attendees);
+                let summary = getValue(inputValues.summary, config.summary);
+                let description = getValue(inputValues.description, config.description);
+                let location = getValue(inputValues.location, config.location);
+                let startDateTime = getValue(inputValues.startDateTime, config.startDateTime);
+                let endDateTime = getValue(inputValues.endDateTime, config.endDateTime);
+                let attendees = getValue(inputValues.attendees, config.attendees);
                 const eventId = getValue(eventIdFromInput, config.eventId);
 
-                console.log('[Runner] ExecuteNodeWithInputs Google Calendar - inputValues:', JSON.stringify(inputValues));
+                // Handle dynamic fields from connected action node (API, etc.)
+                const inputData = inputValues.input;
+                if (inputData && typeof inputData === 'object') {
+                    // Summary
+                    if (dynamicFields.summary) {
+                        if (dynamicFieldPaths.summary) {
+                            const extracted = getNestedValue(inputData, dynamicFieldPaths.summary);
+                            if (extracted !== undefined) {
+                                summary = typeof extracted === 'string' ? extracted : JSON.stringify(extracted);
+                                console.log('[Runner] Using dynamic summary from path', dynamicFieldPaths.summary, ':', summary);
+                            }
+                        } else {
+                            summary = inputData._mapped?.summary ?? inputData.summary ?? inputData.title ?? summary;
+                        }
+                    }
+                    // Description
+                    if (dynamicFields.description) {
+                        if (dynamicFieldPaths.description) {
+                            const extracted = getNestedValue(inputData, dynamicFieldPaths.description);
+                            if (extracted !== undefined) {
+                                description = typeof extracted === 'string' ? extracted : JSON.stringify(extracted, null, 2);
+                                console.log('[Runner] Using dynamic description from path', dynamicFieldPaths.description);
+                            }
+                        } else {
+                            description = inputData._mapped?.description ?? inputData.description ?? inputData.body ?? description;
+                        }
+                    }
+                    // Location
+                    if (dynamicFields.location) {
+                        if (dynamicFieldPaths.location) {
+                            const extracted = getNestedValue(inputData, dynamicFieldPaths.location);
+                            if (extracted !== undefined) {
+                                location = typeof extracted === 'string' ? extracted : JSON.stringify(extracted);
+                            }
+                        } else {
+                            location = inputData._mapped?.location ?? inputData.location ?? location;
+                        }
+                    }
+                }
+
+                console.log('[Runner] ExecuteNodeWithInputs Google Calendar - dynamicFields:', JSON.stringify(dynamicFields), 'Paths:', JSON.stringify(dynamicFieldPaths));
+                console.log('[Runner] Input values:', JSON.stringify(inputValues));
                 console.log('[Runner] Final values - summary:', summary, 'startDateTime:', startDateTime, 'endDateTime:', endDateTime, 'eventId:', eventId);
 
                 const calendarResponse = await fetch('/api/workflows/actions/google-calendar', {
@@ -826,6 +1106,21 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     return configVal;
                 };
 
+                // Helper to get input data from specific source node or default input
+                const getSourceData = (fieldConfig, defaultInput) => {
+                    const pathConfig = getDynamicPath(fieldConfig);
+                    if (!pathConfig) return defaultInput;
+
+                    // If nodeId specified, look for that specific node's output in inputValues
+                    if (pathConfig.nodeId) {
+                        const sourceKey = `__node_${pathConfig.nodeId}`;
+                        if (inputValues[sourceKey] !== undefined) {
+                            return inputValues[sourceKey];
+                        }
+                    }
+                    return defaultInput;
+                };
+
                 // Check if we have a connected Docs document object (from previous Docs node)
                 let documentIdFromInput = inputValues.documentId;
                 if (!documentIdFromInput && inputValues.input && typeof inputValues.input === 'object') {
@@ -835,12 +1130,82 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     }
                 }
 
-                const title = getValue(inputValues.title, config.title);
-                const content = getValue(inputValues.content, config.content);
+                // Get dynamic field configuration
+                const dynamicFields = config.dynamicFields || {};
+                const dynamicFieldPaths = config.dynamicFieldPaths || {};
+
+                // Extract values using dynamic field paths from API response
+                let title = getValue(inputValues.title, config.title);
+                let content = getValue(inputValues.content, config.content);
                 const documentId = getValue(documentIdFromInput, config.documentId);
 
-                console.log('[Runner] ExecuteNodeWithInputs Google Docs - inputValues:', JSON.stringify(inputValues));
-                console.log('[Runner] Final values - title:', title, 'content:', content, 'documentId:', documentId);
+                // Handle dynamic title from connected action node (API, Constant, etc.)
+                if (dynamicFields.title) {
+                    const titlePathConfig = getDynamicPath(dynamicFieldPaths.title);
+                    const inputData = getSourceData(dynamicFieldPaths.title, inputValues.input);
+
+                    if (inputData !== undefined && inputData !== null) {
+                        if (typeof inputData === 'string') {
+                            title = inputData;
+                            console.log('[Runner] Using dynamic title from constant:', title);
+                        } else if (typeof inputData === 'object') {
+                            if (titlePathConfig?.path) {
+                                const extracted = getNestedValue(inputData, titlePathConfig.path);
+                                if (extracted !== undefined) {
+                                    title = typeof extracted === 'string' ? extracted : JSON.stringify(extracted);
+                                    console.log('[Runner] Using dynamic title from path', titlePathConfig.path, ':', title);
+                                }
+                            } else {
+                                // Auto-detect common field names
+                                title = inputData._mapped?.title ?? inputData.title ?? inputData.name ?? JSON.stringify(inputData);
+                                console.log('[Runner] Using auto-detected dynamic title:', title);
+                            }
+                        }
+                    }
+                }
+
+                // Handle dynamic content from connected action node (API, Constant, etc.)
+                if (dynamicFields.content) {
+                    const contentPathConfig = getDynamicPath(dynamicFieldPaths.content);
+                    const inputData = getSourceData(dynamicFieldPaths.content, inputValues.input);
+
+                    if (inputData !== undefined && inputData !== null) {
+                        if (typeof inputData === 'string') {
+                            content = inputData;
+                            console.log('[Runner] Using dynamic content from constant');
+                        } else if (typeof inputData === 'object') {
+                            if (contentPathConfig?.path) {
+                                const extracted = getNestedValue(inputData, contentPathConfig.path);
+                                if (extracted !== undefined) {
+                                    content = typeof extracted === 'string' ? extracted : JSON.stringify(extracted, null, 2);
+                                    console.log('[Runner] Using dynamic content from path', contentPathConfig.path);
+                                }
+                            } else {
+                                // Auto-detect common field names
+                                content = inputData._mapped?.content ?? inputData.content ?? inputData.body ?? inputData.text ?? JSON.stringify(inputData, null, 2);
+                                console.log('[Runner] Using auto-detected dynamic content');
+                            }
+                        }
+                    }
+                }
+
+                console.log('[Runner] ExecuteNodeWithInputs Google Docs - dynamicFields:', JSON.stringify(dynamicFields), 'Paths:', JSON.stringify(dynamicFieldPaths));
+                console.log('[Runner] Input values:', JSON.stringify(inputValues));
+                console.log('[Runner] Final values - title:', title, 'content:', content?.substring(0, 100), 'documentId:', documentId);
+
+                const requestBody = {
+                    team_id: teamId,
+                    operation: config.operation,
+                    // Only include documentId if it's a non-empty string (required for read/update, not for create)
+                    documentId: documentId && typeof documentId === 'string' ? documentId : undefined,
+                    title: title,
+                    content: content,
+                    updateOperation: config.updateOperation,
+                    searchText: config.searchText,
+                    insertIndex: config.insertIndex,
+                    maxResults: config.maxResults,
+                };
+                console.log('[Runner] Sending Google Docs request:', requestBody);
 
                 const docsResponse = await fetch('/api/workflows/actions/google-docs', {
                     method: 'POST',
@@ -848,30 +1213,64 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
                     },
-                    body: JSON.stringify({
-                        team_id: teamId,
-                        operation: config.operation,
-                        documentId: documentId,
-                        title: title,
-                        content: content,
-                        updateOperation: config.updateOperation,
-                        searchText: config.searchText,
-                        insertIndex: config.insertIndex,
-                        maxResults: config.maxResults,
-                    }),
+                    body: JSON.stringify(requestBody),
                 });
 
                 const docsData = await docsResponse.json();
 
                 if (!docsResponse.ok || !docsData.success) {
+                    console.error('[Runner] Google Docs action failed:', docsResponse.status, docsData);
                     if (docsData.errorCode === 'DOCUMENT_NOT_FOUND') {
                         console.warn('[Runner] Document not found:', docsData.error);
                     }
-                    throw new Error(docsData.error || 'Failed to execute Google Docs action');
+                    // For validation errors (422), show the detailed message
+                    const errorMessage = docsData.message || docsData.error || 'Failed to execute Google Docs action';
+                    throw new Error(errorMessage);
                 }
 
                 console.log('[Runner] Google Docs action completed:', docsData);
                 return { success: true, output: docsData.data };
+            }
+
+            case 'apiAction': {
+                if (!config.url) {
+                    throw new Error('API Action requires a URL');
+                }
+
+                const { method = 'GET', url, requestBody = {}, headers = {}, responseMapping = [] } = config;
+
+                const response = await fetch(url, {
+                    method: method.toUpperCase(),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...headers,
+                    },
+                    body: ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())
+                        ? JSON.stringify(requestBody)
+                        : undefined,
+                });
+
+                const data = await response.json();
+
+                // Apply responseMapping to create _mapped object for dynamic field access
+                if (responseMapping && responseMapping.length > 0 && data) {
+                    const mapped = {};
+                    responseMapping.forEach((mapping) => {
+                        if (mapping.alias && mapping.path) {
+                            const value = getNestedValue(data, mapping.path);
+                            if (value !== undefined) {
+                                mapped[mapping.alias] = value;
+                            }
+                        }
+                    });
+                    if (Object.keys(mapped).length > 0) {
+                        data._mapped = mapped;
+                        console.log('[Runner] Applied responseMapping (executeNodeWithInputs), _mapped:', mapped);
+                    }
+                }
+
+                return { success: true, output: data };
             }
 
             default:
@@ -922,6 +1321,9 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         const targetField = sourceNode.data.config?.targetField;
 
                         console.log(`[executeNodeWithDependencies] Source ${sourceNode.id} output:`, value, 'targetField:', targetField);
+
+                        // Store by node ID for multi-source selection (allows getSourceData to find specific nodes)
+                        inputValues[`__node_${sourceNode.id}`] = value;
 
                         if (targetField) {
                             inputValues[targetField] = value;

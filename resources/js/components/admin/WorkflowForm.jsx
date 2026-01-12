@@ -30,7 +30,7 @@ const WorkflowForm = ({
                         </label>
                         <input
                             type="text"
-                            value={workflowName}
+                            value={workflowName ?? ''}
                             onChange={(e) => onNameChange(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             placeholder="Workflow name"
@@ -58,7 +58,7 @@ const WorkflowForm = ({
                             Description
                         </label>
                         <textarea
-                            value={workflowDescription}
+                            value={workflowDescription ?? ''}
                             onChange={(e) => onDescriptionChange(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             placeholder="Workflow description"

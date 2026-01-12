@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useNodesState, useEdgesState, addEdge, useReactFlow } from '@xyflow/react';
 import { nodeTypeConfig } from '@/constants/workflowConstants';
 import { getLayoutedElements } from '@/utils/elkLayout';
@@ -548,6 +548,48 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         setSelectedNode(null);
     }, []);
 
+    // Auto-update node when config changes (debounced to prevent excessive updates)
+    const autoUpdateTimeoutRef = useRef(null);
+    useEffect(() => {
+        if (!selectedNode || !nodeConfig) return;
+
+        // Clear any pending timeout
+        if (autoUpdateTimeoutRef.current) {
+            clearTimeout(autoUpdateTimeoutRef.current);
+        }
+
+        // Debounce the update by 300ms
+        autoUpdateTimeoutRef.current = setTimeout(() => {
+            try {
+                const parsedConfig = JSON.parse(nodeConfig || '{}');
+                setNodes((nds) =>
+                    nds.map((node) => {
+                        if (node.id === selectedNode.id) {
+                            return {
+                                ...node,
+                                data: {
+                                    ...node.data,
+                                    label: nodeLabel,
+                                    description: nodeDescription,
+                                    config: parsedConfig,
+                                },
+                            };
+                        }
+                        return node;
+                    })
+                );
+            } catch (e) {
+                // Invalid JSON, skip auto-update
+            }
+        }, 300);
+
+        return () => {
+            if (autoUpdateTimeoutRef.current) {
+                clearTimeout(autoUpdateTimeoutRef.current);
+            }
+        };
+    }, [selectedNode?.id, nodeConfig, nodeLabel, nodeDescription, setNodes]);
+
     const updateSelectedNode = useCallback(() => {
         if (!selectedNode) return;
 
@@ -612,6 +654,16 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
             if (event.key === 'Delete' || event.key === 'Backspace') {
                 // Don't trigger when typing in input fields
                 if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                    return;
+                }
+
+                // Don't trigger when in contenteditable elements (e.g., TipTap/RichTextEditor)
+                if (event.target.isContentEditable || event.target.closest('[contenteditable="true"]')) {
+                    return;
+                }
+
+                // Don't trigger when a modal is open (check for modal backdrop or container)
+                if (document.querySelector('[data-modal-open="true"]') || event.target.closest('[data-modal-open="true"]')) {
                     return;
                 }
 

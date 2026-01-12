@@ -45,6 +45,13 @@ const ConditionNode = ({ data, selected, id }) => {
         return isDark ? '#374151' : '#e5e7eb';
     };
 
+    const handleTrigger = (e) => {
+        e.stopPropagation();
+        if (data.onTrigger) {
+            data.onTrigger(id, data);
+        }
+    };
+
     const handleDelete = (e) => {
         e.stopPropagation();
         if (data.onDelete) {
@@ -223,16 +230,14 @@ const ConditionNode = ({ data, selected, id }) => {
                             >
                                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                             </svg>
-                        ) : hasResult ? (
-                            <span
-                                style={{
-                                    fontSize: '18px',
-                                    fontWeight: 'bold',
-                                    color: conditionResult ? '#22c55e' : '#ef4444',
-                                }}
-                            >
-                                {conditionResult ? 'T' : 'F'}
-                            </span>
+                        ) : isSuccess ? (
+                            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5">
+                                <path d="M20 6L9 17l-5-5" />
+                            </svg>
+                        ) : isError ? (
+                            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5">
+                                <path d="M18 6L6 18M6 6l12 12" />
+                            </svg>
                         ) : (
                             icon && icon(isDark ? '#9ca3af' : '#374151')
                         )}
@@ -257,6 +262,9 @@ const ConditionNode = ({ data, selected, id }) => {
                                 fontSize: '12px',
                                 color: isDark ? '#9ca3af' : '#6b7280',
                                 marginTop: '2px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
                             }}
                         >
                             <span
@@ -269,43 +277,91 @@ const ConditionNode = ({ data, selected, id }) => {
                             >
                                 A {operatorLabels[operator] || '?'} B
                             </span>
+                            {hasResult && (
+                                <span
+                                    style={{
+                                        padding: '2px 8px',
+                                        background: conditionResult
+                                            ? (isDark ? 'rgba(34, 197, 94, 0.2)' : '#dcfce7')
+                                            : (isDark ? 'rgba(239, 68, 68, 0.2)' : '#fee2e2'),
+                                        borderRadius: '4px',
+                                        fontWeight: '600',
+                                        fontSize: '11px',
+                                        color: conditionResult ? '#22c55e' : '#ef4444',
+                                    }}
+                                >
+                                    {conditionResult ? 'TRUE' : 'FALSE'}
+                                </span>
+                            )}
                         </div>
                     </div>
 
-                    {/* Delete button */}
-                    {!isLoading && data.onDelete && (
-                        <button
-                            onClick={handleDelete}
-                            style={{
-                                width: '32px',
-                                height: '32px',
-                                borderRadius: '6px',
-                                border: `1.5px solid ${isDark ? '#4b5563' : '#d1d5db'}`,
-                                background: 'transparent',
-                                color: isDark ? '#9ca3af' : '#374151',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.15s',
-                                flexShrink: 0,
-                            }}
-                            title="Delete"
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#fee2e2';
-                                e.currentTarget.style.borderColor = '#ef4444';
-                                e.currentTarget.style.color = '#ef4444';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.borderColor = isDark ? '#4b5563' : '#d1d5db';
-                                e.currentTarget.style.color = isDark ? '#9ca3af' : '#374151';
-                            }}
-                        >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                            </svg>
-                        </button>
+                    {/* Action buttons */}
+                    {!isLoading && (
+                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                            {data.onTrigger && (
+                                <button
+                                    onClick={handleTrigger}
+                                    style={{
+                                        width: '32px',
+                                        height: '32px',
+                                        borderRadius: '6px',
+                                        border: 'none',
+                                        background: '#3b82f6',
+                                        color: '#fff',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        transition: 'background 0.15s',
+                                    }}
+                                    title="Run"
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = '#2563eb';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = '#3b82f6';
+                                    }}
+                                >
+                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                        <polygon points="5 3 19 12 5 21 5 3" />
+                                    </svg>
+                                </button>
+                            )}
+                            {data.onDelete && (
+                                <button
+                                    onClick={handleDelete}
+                                    style={{
+                                        width: '32px',
+                                        height: '32px',
+                                        borderRadius: '6px',
+                                        border: `1.5px solid ${isDark ? '#4b5563' : '#d1d5db'}`,
+                                        background: 'transparent',
+                                        color: isDark ? '#9ca3af' : '#374151',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        transition: 'all 0.15s',
+                                    }}
+                                    title="Delete"
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = '#fee2e2';
+                                        e.currentTarget.style.borderColor = '#ef4444';
+                                        e.currentTarget.style.color = '#ef4444';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'transparent';
+                                        e.currentTarget.style.borderColor = isDark ? '#4b5563' : '#d1d5db';
+                                        e.currentTarget.style.color = isDark ? '#9ca3af' : '#374151';
+                                    }}
+                                >
+                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
