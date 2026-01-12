@@ -5,6 +5,7 @@ namespace App\Services\Workflow;
 use App\Models\Workflow;
 use App\Models\WorkflowNode;
 use App\Services\Google\GoogleCalendarService;
+use App\Services\Google\GoogleDocsService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -65,9 +66,9 @@ class WorkflowRunnerService
                     continue;
                 }
 
-                // Check if this is a Join node - it needs all inputs ready
+                // Check if this is a Join, Merge or Template node - they need all inputs ready
                 $nodeType = ($node->data['type'] ?? $node->type);
-                if ($nodeType === 'join') {
+                if ($nodeType === 'join' || $nodeType === 'merge' || $nodeType === 'template') {
                     if (! $this->areAllJoinInputsReady($node)) {
                         // Put it back at the end of the queue to process later
                         if (! isset($this->pendingJoinNodes[$node->node_id])) {
@@ -81,7 +82,7 @@ class WorkflowRunnerService
 
                             continue;
                         }
-                        $this->log('warning', "Join node {$node->node_id} proceeding without all inputs after timeout");
+                        $this->log('warning', "{$nodeType} node {$node->node_id} proceeding without all inputs after timeout");
                     }
                 }
 
@@ -265,12 +266,15 @@ class WorkflowRunnerService
             'condition' => $this->executeConditionNode($config, $inputValues),
             'branch' => $this->executeBranchNode($inputValues),
             'join' => $this->executeJoinNode($inputValues),
+            'merge' => $this->executeMergeNode($node, $config),
+            'template' => $this->executeTemplateNode($node, $config),
             'apiAction' => $this->executeApiAction($config, $inputValues),
             'emailAction' => $this->executeEmailAction($config, $inputValues),
             'databaseAction' => $this->executeDatabaseAction($config, $inputValues),
             'scriptAction' => $this->executeScriptAction($config, $inputValues),
             'webhookAction' => $this->executeWebhookAction($config, $inputValues),
             'googleCalendarAction' => $this->executeGoogleCalendarAction($config, $inputValues),
+            'googleDocsAction' => $this->executeGoogleDocsAction($config, $inputValues),
             default => ['success' => true, 'output' => $inputValues['input'] ?? null],
         };
     }
@@ -307,8 +311,8 @@ class WorkflowRunnerService
                 default => $now,
             };
 
-            // Format as ISO 8601 for Google Calendar compatibility
-            return ['success' => true, 'output' => $result->format('Y-m-d\TH:i')];
+            // Format as ISO 8601 with timezone for Google Calendar compatibility
+            return ['success' => true, 'output' => $result->toIso8601String()];
         }
 
         return ['success' => true, 'output' => $config['value'] ?? null];
@@ -367,6 +371,113 @@ class WorkflowRunnerService
     protected function executeJoinNode(array $inputValues): array
     {
         return ['success' => true, 'output' => $inputValues['input'] ?? null];
+    }
+
+    protected function executeMergeNode(WorkflowNode $node, array $config): array
+    {
+        $separator = $config['separator'] ?? '';
+        $inputIds = $node->data['inputs'] ?? ['input-1', 'input-2'];
+
+        // Find all incoming connections
+        $incomingConnections = $this->connections->filter(
+            fn ($conn) => $conn->target_node_id === $node->node_id
+        );
+
+        // Build a map of input slot -> value, respecting targetField from source nodes
+        $valuesBySlot = [];
+        foreach ($incomingConnections as $conn) {
+            $sourceOutput = $this->nodeOutputs[$conn->source_node_id] ?? null;
+
+            // Skip failed nodes
+            if (\is_array($sourceOutput) && isset($sourceOutput['__failed'])) {
+                continue;
+            }
+
+            if ($sourceOutput === null) {
+                continue;
+            }
+
+            // Check if source node has a targetField configured
+            $sourceNode = $this->nodes->firstWhere('node_id', $conn->source_node_id);
+            $sourceConfig = $sourceNode?->data['config'] ?? [];
+            $targetField = $sourceConfig['targetField'] ?? null;
+
+            // Use targetField if set, otherwise use connection's target_handle
+            $targetHandle = $targetField ?: $conn->target_handle;
+            $slotIndex = array_search($targetHandle, $inputIds);
+
+            if ($slotIndex !== false) {
+                $valuesBySlot[$slotIndex] = (string) $sourceOutput;
+            }
+        }
+
+        // Sort by slot index and collect values
+        ksort($valuesBySlot);
+        $values = array_values($valuesBySlot);
+
+        $mergedValue = implode($separator, $values);
+        $this->log('info', 'Merge node: '.count($values)." inputs, separator: \"{$separator}\", result: \"{$mergedValue}\"");
+
+        return ['success' => true, 'output' => $mergedValue];
+    }
+
+    protected function executeTemplateNode(WorkflowNode $node, array $config): array
+    {
+        $template = $config['template'] ?? '';
+        $inputIds = $node->data['inputs'] ?? ['input-1', 'input-2'];
+
+        // Find all incoming connections
+        $incomingConnections = $this->connections->filter(
+            fn ($conn) => $conn->target_node_id === $node->node_id
+        );
+
+        // Build values indexed by input number
+        $valuesByIndex = [];
+        foreach ($incomingConnections as $conn) {
+            $sourceOutput = $this->nodeOutputs[$conn->source_node_id] ?? null;
+
+            // Skip failed nodes
+            if (\is_array($sourceOutput) && isset($sourceOutput['__failed'])) {
+                continue;
+            }
+
+            if ($sourceOutput === null) {
+                continue;
+            }
+
+            // Check if source node has a targetField configured (for Constant nodes targeting specific input)
+            $sourceNode = $this->nodes->firstWhere('node_id', $conn->source_node_id);
+            $sourceConfig = $sourceNode?->data['config'] ?? [];
+            $targetField = $sourceConfig['targetField'] ?? null;
+
+            // Use targetField if set, otherwise use connection's target_handle
+            $targetHandle = $targetField ?: $conn->target_handle;
+
+            // Find the index from the handle (e.g., 'input-1' -> 1, 'input-2' -> 2)
+            $handleIndex = array_search($targetHandle, $inputIds);
+            if ($handleIndex !== false) {
+                $valuesByIndex[$handleIndex + 1] = $sourceOutput; // 1-indexed for ${input1}, ${input2}, etc.
+            }
+        }
+
+        // First, convert @mentions in HTML to ${inputN} placeholders
+        // Match: <span data-type="mention" data-id="input1" ...>@Label</span>
+        $processedTemplate = preg_replace(
+            '/<span[^>]*data-type="mention"[^>]*data-id="(input\d+)"[^>]*>[^<]*<\/span>/i',
+            '${$1}',
+            $template
+        );
+
+        // Replace ${inputN} placeholders with actual values
+        $result = preg_replace_callback('/\$\{input(\d+)\}/', function ($matches) use ($valuesByIndex) {
+            $index = (int) $matches[1];
+
+            return isset($valuesByIndex[$index]) ? (string) $valuesByIndex[$index] : $matches[0];
+        }, $processedTemplate);
+
+        $this->log('info', 'Template node: '.count($valuesByIndex).' inputs, result length: '.strlen($result));
+
+        return ['success' => true, 'output' => $result];
     }
 
     protected function executeApiAction(array $config, array $inputValues): array
@@ -538,6 +649,11 @@ class WorkflowRunnerService
 
     protected function executeGoogleCalendarAction(array $config, array $inputValues): array
     {
+        // Log entry point with raw data
+        $this->log('info', 'Google Calendar action started');
+        $this->log('info', 'Raw config: '.json_encode($config));
+        $this->log('info', 'Raw inputValues: '.json_encode($inputValues));
+
         $team = $this->workflow->team;
 
         if (! $team || ! $team->hasGoogleCalendarConnected()) {
@@ -550,42 +666,76 @@ class WorkflowRunnerService
         $operation = $config['operation'] ?? 'create';
         $calendarId = $config['calendarId'] ?? 'primary';
 
-        $config = $this->replacePlaceholders($config, $inputValues);
+        $configAfterPlaceholders = $this->replacePlaceholders($config, $inputValues);
+        $this->log('info', 'Config after placeholder replacement: '.json_encode($configAfterPlaceholders));
+
+        // Check if we have a connected Calendar event object (from previous Calendar node)
+        // If so, extract the id for eventId
+        $eventIdFromInput = $inputValues['eventId'] ?? null;
+        if (! $eventIdFromInput && isset($inputValues['input']) && \is_array($inputValues['input'])) {
+            // If input is a Calendar event object, extract the id
+            if (isset($inputValues['input']['id'])) {
+                $eventIdFromInput = $inputValues['input']['id'];
+                $this->log('info', 'Extracted eventId from connected Calendar node output: '.$eventIdFromInput);
+            }
+        }
 
         // Use input values from connected nodes if available, otherwise fall back to config
         // This allows dynamic values from Constant nodes with targetField set
-        $summary = $inputValues['summary'] ?? $config['summary'] ?? '';
-        $description = $inputValues['description'] ?? $config['description'] ?? '';
-        $location = $inputValues['location'] ?? $config['location'] ?? '';
-        $startDateTime = $inputValues['startDateTime'] ?? $config['startDateTime'] ?? null;
-        $endDateTime = $inputValues['endDateTime'] ?? $config['endDateTime'] ?? null;
-        $attendees = $inputValues['attendees'] ?? $config['attendees'] ?? '';
-        $eventId = $inputValues['eventId'] ?? $config['eventId'] ?? '';
+        $summary = $inputValues['summary'] ?? $configAfterPlaceholders['summary'] ?? '';
+        $description = $inputValues['description'] ?? $configAfterPlaceholders['description'] ?? '';
+        $location = $inputValues['location'] ?? $configAfterPlaceholders['location'] ?? '';
+        $startDateTime = $inputValues['startDateTime'] ?? $configAfterPlaceholders['startDateTime'] ?? null;
+        $endDateTime = $inputValues['endDateTime'] ?? $configAfterPlaceholders['endDateTime'] ?? null;
+        $attendees = $inputValues['attendees'] ?? $configAfterPlaceholders['attendees'] ?? '';
+        $eventId = $eventIdFromInput ?? $configAfterPlaceholders['eventId'] ?? '';
+
+        // Check for unreplaced placeholders and clear them
+        $checkAndClear = function ($value) {
+            if (is_string($value) && preg_match('/\{\{\{.*?\}\}\}/', $value)) {
+                return null; // Clear unreplaced placeholders
+            }
+
+            return $value;
+        };
+
+        $summary = $checkAndClear($summary) ?? '';
+        $description = $checkAndClear($description) ?? '';
+        $location = $checkAndClear($location) ?? '';
+        $startDateTime = $checkAndClear($startDateTime);
+        $endDateTime = $checkAndClear($endDateTime);
+        $attendees = $checkAndClear($attendees) ?? '';
+        $eventId = $checkAndClear($eventId) ?? '';
 
         $this->log('info', "Google Calendar {$operation} - Summary: {$summary}, Start: {$startDateTime}, End: {$endDateTime}");
+        $this->log('info', 'Final inputValues: '.json_encode($inputValues));
 
         try {
             $calendarService = app(GoogleCalendarService::class);
 
+            $eventData = [
+                'summary' => $summary,
+                'description' => $description,
+                'location' => $location,
+                'start' => [
+                    'dateTime' => $startDateTime ?? now()->toIso8601String(),
+                    'timeZone' => $configAfterPlaceholders['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
+                ],
+                'end' => [
+                    'dateTime' => $endDateTime ?? now()->addHour()->toIso8601String(),
+                    'timeZone' => $configAfterPlaceholders['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
+                ],
+                'attendees' => $this->parseAttendees($attendees),
+            ];
+
+            $this->log('info', 'Event data being sent to Google Calendar: '.json_encode($eventData));
+
             $result = match ($operation) {
-                'create' => $calendarService->createEvent($team, $calendarId, [
-                    'summary' => $summary,
-                    'description' => $description,
-                    'location' => $location,
-                    'start' => [
-                        'dateTime' => $startDateTime ?? now()->toIso8601String(),
-                        'timeZone' => $config['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
-                    ],
-                    'end' => [
-                        'dateTime' => $endDateTime ?? now()->addHour()->toIso8601String(),
-                        'timeZone' => $config['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
-                    ],
-                    'attendees' => $this->parseAttendees($attendees),
-                ]),
+                'create' => $calendarService->createEvent($team, $calendarId, $eventData),
                 'list' => $calendarService->listEvents($team, $calendarId, [
-                    'timeMin' => $config['timeMin'] ?? null,
-                    'timeMax' => $config['timeMax'] ?? null,
-                    'maxResults' => $config['maxResults'] ?? 10,
+                    'timeMin' => $configAfterPlaceholders['timeMin'] ?? null,
+                    'timeMax' => $configAfterPlaceholders['timeMax'] ?? null,
+                    'maxResults' => $configAfterPlaceholders['maxResults'] ?? 10,
                 ]),
                 'update' => $calendarService->updateEvent(
                     $team,
@@ -597,11 +747,11 @@ class WorkflowRunnerService
                         'location' => $location ?: null,
                         'start' => $startDateTime ? [
                             'dateTime' => $startDateTime,
-                            'timeZone' => $config['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
+                            'timeZone' => $configAfterPlaceholders['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
                         ] : null,
                         'end' => $endDateTime ? [
                             'dateTime' => $endDateTime,
-                            'timeZone' => $config['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
+                            'timeZone' => $configAfterPlaceholders['timeZone'] ?? config('app.timezone', 'Europe/Budapest'),
                         ] : null,
                     ])
                 ),
@@ -609,7 +759,28 @@ class WorkflowRunnerService
                 default => throw new \InvalidArgumentException("Unknown operation: {$operation}"),
             };
 
+            // Check if the result contains an error (e.g., from 404 handling)
+            if (\is_array($result) && isset($result['success']) && $result['success'] === false) {
+                $this->log('warning', "Google Calendar {$operation} failed: ".($result['message'] ?? $result['error'] ?? 'Unknown error'));
+
+                return [
+                    'success' => false,
+                    'error' => $result['message'] ?? $result['error'] ?? 'Operation failed',
+                    'errorCode' => $result['errorCode'] ?? null,
+                ];
+            }
+
             $this->log('info', "Google Calendar {$operation} completed successfully");
+
+            // For delete operation, include the deleted marker in the output
+            if ($operation === 'delete' && \is_array($result) && isset($result['deleted'])) {
+                return [
+                    'success' => true,
+                    'deleted' => true,
+                    'deletedEventId' => $result['deletedEventId'] ?? $eventId,
+                    'output' => null, // No event object because it was deleted
+                ];
+            }
 
             return [
                 'success' => true,
@@ -633,6 +804,107 @@ class WorkflowRunnerService
         }
     }
 
+    protected function executeGoogleDocsAction(array $config, array $inputValues): array
+    {
+        $this->log('info', 'Google Docs action started');
+        $this->log('info', 'Raw config: '.json_encode($config));
+        $this->log('info', 'Raw inputValues: '.json_encode($inputValues));
+
+        $team = $this->workflow->team;
+
+        if (! $team || ! $team->googleCredential) {
+            return [
+                'success' => false,
+                'error' => 'Google is not connected for this team',
+            ];
+        }
+
+        $operation = $config['operation'] ?? 'create';
+        $configAfterPlaceholders = $this->replacePlaceholders($config, $inputValues);
+        $this->log('info', 'Config after placeholder replacement: '.json_encode($configAfterPlaceholders));
+
+        // Check if we have a connected Docs document object (from previous Docs node)
+        $documentIdFromInput = $inputValues['documentId'] ?? null;
+        if (! $documentIdFromInput && isset($inputValues['input']) && \is_array($inputValues['input'])) {
+            if (isset($inputValues['input']['id'])) {
+                $documentIdFromInput = $inputValues['input']['id'];
+                $this->log('info', 'Extracted documentId from connected Docs node output: '.$documentIdFromInput);
+            }
+        }
+
+        // Use input values from connected nodes if available
+        $title = $inputValues['title'] ?? $configAfterPlaceholders['title'] ?? 'Untitled';
+        $content = $inputValues['content'] ?? $configAfterPlaceholders['content'] ?? '';
+        $documentId = $documentIdFromInput ?? $configAfterPlaceholders['documentId'] ?? '';
+
+        // Check for unreplaced placeholders and clear them
+        $checkAndClear = function ($value) {
+            if (is_string($value) && preg_match('/\{\{\{.*?\}\}\}/', $value)) {
+                return null;
+            }
+
+            return $value;
+        };
+
+        $title = $checkAndClear($title) ?? 'Untitled';
+        $content = $checkAndClear($content) ?? '';
+        $documentId = $checkAndClear($documentId) ?? '';
+
+        $this->log('info', "Google Docs {$operation} - Title: {$title}, DocumentId: {$documentId}");
+
+        try {
+            $docsService = app(GoogleDocsService::class);
+
+            $result = match ($operation) {
+                'create' => $docsService->createDocument($team, $title, $content ?: null),
+                'read' => $docsService->getDocument($team, $documentId),
+                'update' => $docsService->updateDocument($team, $documentId, [
+                    'operation' => $configAfterPlaceholders['updateOperation'] ?? 'append',
+                    'content' => $content,
+                    'searchText' => $configAfterPlaceholders['searchText'] ?? '',
+                    'insertIndex' => $configAfterPlaceholders['insertIndex'] ?? 1,
+                ]),
+                'list' => $docsService->listDocuments($team, [
+                    'maxResults' => $configAfterPlaceholders['maxResults'] ?? 20,
+                ]),
+                default => throw new \InvalidArgumentException("Unknown operation: {$operation}"),
+            };
+
+            // Check if the result contains an error (e.g., from 404 handling)
+            if (\is_array($result) && isset($result['success']) && $result['success'] === false) {
+                $this->log('warning', "Google Docs {$operation} failed: ".($result['message'] ?? $result['error'] ?? 'Unknown error'));
+
+                return [
+                    'success' => false,
+                    'error' => $result['message'] ?? $result['error'] ?? 'Operation failed',
+                    'errorCode' => $result['errorCode'] ?? null,
+                ];
+            }
+
+            $this->log('info', "Google Docs {$operation} completed successfully");
+
+            return [
+                'success' => true,
+                'output' => $result,
+            ];
+
+        } catch (\Google\Service\Exception $e) {
+            $this->log('error', "Google Docs API error: {$e->getMessage()}");
+
+            return [
+                'success' => false,
+                'error' => "Google Docs API error: {$e->getMessage()}",
+            ];
+        } catch (\Exception $e) {
+            $this->log('error', "Google Docs action failed: {$e->getMessage()}");
+
+            return [
+                'success' => false,
+                'error' => "Google Docs action failed: {$e->getMessage()}",
+            ];
+        }
+    }
+
     protected function parseAttendees(string $attendees): array
     {
         if (empty($attendees)) {
@@ -651,7 +923,9 @@ class WorkflowRunnerService
         array_walk_recursive($data, function (&$item) use ($values) {
             if (is_string($item)) {
                 foreach ($values as $key => $value) {
+                    // Support both {{{key}}} and {{{input.key}}} patterns
                     $item = str_replace("{{{$key}}}", (string) $value, $item);
+                    $item = str_replace("{{{input.$key}}}", (string) $value, $item);
                 }
             }
         });

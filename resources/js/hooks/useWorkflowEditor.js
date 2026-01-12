@@ -7,9 +7,10 @@ import axios from 'axios';
 // Map data types to React Flow node types
 const getReactFlowNodeType = (dataType) => {
     if (dataType === 'googleCalendarAction') return 'googleCalendar';
+    if (dataType === 'googleDocsAction') return 'googleDocs';
     const actionTypes = ['apiAction', 'emailAction', 'databaseAction', 'scriptAction', 'webhookAction', 'action'];
     if (actionTypes.includes(dataType)) return 'action';
-    if (['start', 'end', 'condition', 'constant', 'branch', 'join'].includes(dataType)) return dataType;
+    if (['start', 'end', 'condition', 'constant', 'branch', 'join', 'merge', 'template'].includes(dataType)) return dataType;
     return 'action'; // fallback
 };
 
@@ -25,8 +26,12 @@ const getNodeDimensions = (nodeType) => {
             return { width: 140, height: 60 };
         case 'branch':
         case 'join':
-            return { width: 220, height: 70 };
+        case 'merge':
+        case 'template':
+            return { width: 220, height: 90 };
         case 'googleCalendar':
+            return { width: 240, height: 80 };
+        case 'googleDocs':
             return { width: 240, height: 80 };
         default:
             return { width: 180, height: 70 };
@@ -62,10 +67,18 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         setNodes((nds) =>
             nds.map((node) => {
                 if (node.id === nodeId) {
-                    return {
+                    const updatedNode = {
                         ...node,
                         data: { ...node.data, outputs },
                     };
+                    // Also update selectedNode if it's the same node
+                    setSelectedNode((prev) => {
+                        if (prev && prev.id === nodeId) {
+                            return updatedNode;
+                        }
+                        return prev;
+                    });
+                    return updatedNode;
                 }
                 return node;
             })
@@ -77,10 +90,18 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         setNodes((nds) =>
             nds.map((node) => {
                 if (node.id === nodeId) {
-                    return {
+                    const updatedNode = {
                         ...node,
                         data: { ...node.data, inputs },
                     };
+                    // Also update selectedNode if it's the same node
+                    setSelectedNode((prev) => {
+                        if (prev && prev.id === nodeId) {
+                            return updatedNode;
+                        }
+                        return prev;
+                    });
+                    return updatedNode;
                 }
                 return node;
             })
@@ -421,20 +442,26 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                 }
 
                 // Check if the specific target handle already has a connection
-                const targetHandleHasInput = eds.some(edge =>
-                    edge.target === params.target && edge.targetHandle === params.targetHandle
-                );
+                // Exception: Google Calendar and Google Docs nodes can accept multiple connections to their top-target handle
+                const targetNode = nodes.find(n => n.id === params.target);
+                const isMultiInputHandle = (targetNode?.type === 'googleCalendar' || targetNode?.type === 'googleDocs') && params.targetHandle === 'top-target';
 
-                if (targetHandleHasInput) {
-                    console.log('Target handle already has an incoming connection');
-                    alert('This input already has a connection.');
-                    return eds;
+                if (!isMultiInputHandle) {
+                    const targetHandleHasInput = eds.some(edge =>
+                        edge.target === params.target && edge.targetHandle === params.targetHandle
+                    );
+
+                    if (targetHandleHasInput) {
+                        console.log('Target handle already has an incoming connection');
+                        alert('This input already has a connection.');
+                        return eds;
+                    }
                 }
 
                 return addEdge(params, eds);
             });
         },
-        [setEdges]
+        [setEdges, nodes]
     );
 
     const onDragStart = useCallback((event, nodeType) => {
@@ -483,6 +510,18 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         // Add default inputs for join nodes
         if (dataType === 'join') {
             nodeData.inputs = ['input-1', 'input-2'];
+        }
+
+        // Add default inputs and config for merge nodes
+        if (dataType === 'merge') {
+            nodeData.inputs = ['input-1', 'input-2'];
+            nodeData.config = { separator: '' };
+        }
+
+        // Add default inputs and config for template nodes
+        if (dataType === 'template') {
+            nodeData.inputs = ['input-1', 'input-2'];
+            nodeData.config = { template: '${input1} ${input2}' };
         }
 
         const newNode = {

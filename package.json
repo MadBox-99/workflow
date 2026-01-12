@@ -19,6 +19,11 @@
         "@radix-ui/react-separator": "^1.1.8",
         "@radix-ui/react-slider": "^1.3.6",
         "@radix-ui/react-slot": "^1.2.4",
+        "@tiptap/extension-mention": "^3.15.3",
+        "@tiptap/extension-placeholder": "^3.15.3",
+        "@tiptap/react": "^3.15.3",
+        "@tiptap/starter-kit": "^3.15.3",
+        "@tiptap/suggestion": "^3.15.3",
         "@vitejs/plugin-react": "^5.1.0",
         "@xyflow/react": "^12.9.3",
         "class-variance-authority": "^0.7.1",
@@ -28,6 +33,7 @@
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
         "tailwind-merge": "^3.4.0",
+        "tippy.js": "^6.3.7",
         "zustand": "^5.0.8"
     }
 }

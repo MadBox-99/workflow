@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { getFieldsForNodeTypes } from '@/constants/nodeInputFields';
+import RichTextEditor from '@/components/ui/RichTextEditor';
 
 const DATETIME_OPTIONS = [
     { value: 'now', label: 'Now (current time)', description: 'Current date and time' },
@@ -14,18 +16,29 @@ const DATETIME_OPTIONS = [
     { value: 'fixed', label: 'Fixed date/time', description: 'Specific date and time' },
 ];
 
-const TARGET_FIELD_OPTIONS = [
-    { value: '', label: 'None (pass value only)', group: 'General' },
-    { value: 'summary', label: 'Event Title (summary)', group: 'Calendar' },
-    { value: 'description', label: 'Event Description', group: 'Calendar' },
-    { value: 'location', label: 'Event Location', group: 'Calendar' },
-    { value: 'startDateTime', label: 'Start Date/Time', group: 'Calendar' },
-    { value: 'endDateTime', label: 'End Date/Time', group: 'Calendar' },
-    { value: 'attendees', label: 'Attendees (emails)', group: 'Calendar' },
-    { value: 'eventId', label: 'Event ID', group: 'Calendar' },
-];
+const ConstantNodeConfig = ({ config, onChange, connectedNodeTypes = [], nodes = [], currentNodeId = null }) => {
+    // Dynamically get available fields based on connected node types
+    const availableFields = useMemo(
+        () => getFieldsForNodeTypes(connectedNodeTypes),
+        [connectedNodeTypes]
+    );
+    const hasRelevantConnection = availableFields.length > 0;
 
-const ConstantNodeConfig = ({ config, onChange }) => {
+    // Build available nodes for mention in RichTextEditor (exclude current node)
+    const availableNodesForMention = useMemo(() => {
+        return nodes
+            .filter(node => node.id !== currentNodeId && node.data?.type !== 'end')
+            .map(node => ({
+                id: node.id,
+                label: node.data?.label || node.id,
+                type: node.data?.type,
+                color: node.data?.type === 'constant' ? '#8b5cf6' :
+                       node.data?.type === 'start' ? '#22c55e' :
+                       node.data?.type === 'googleCalendarAction' ? '#4285f4' :
+                       node.data?.type === 'googleDocsAction' ? '#4285f4' :
+                       '#6b7280',
+            }));
+    }, [nodes, currentNodeId]);
     const [valueType, setValueType] = useState(config.valueType || 'string');
     const [value, setValue] = useState(config.value !== undefined ? config.value : '');
     const [datetimeOption, setDatetimeOption] = useState(config.datetimeOption || 'now');
@@ -136,6 +149,7 @@ const ConstantNodeConfig = ({ config, onChange }) => {
 
     const handleTypeChange = (e) => {
         const newType = e.target.value;
+        const oldType = valueType;
         setValueType(newType);
 
         // Convert current value to new type
@@ -145,6 +159,16 @@ const ConstantNodeConfig = ({ config, onChange }) => {
             setValue('false');
         } else if (newType === 'datetime') {
             setDatetimeOption('now');
+        } else if (newType === 'richtext' && oldType === 'string') {
+            // Wrap plain text in paragraph if switching from string to richtext
+            if (value && !value.startsWith('<')) {
+                setValue(`<p>${value}</p>`);
+            }
+        } else if (newType === 'string' && oldType === 'richtext') {
+            // Strip HTML tags when switching from richtext to string
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = value;
+            setValue(tempDiv.textContent || tempDiv.innerText || '');
         }
     };
 
@@ -169,6 +193,7 @@ const ConstantNodeConfig = ({ config, onChange }) => {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                     <option value="string">Text (String)</option>
+                    <option value="richtext">Rich Text (HTML)</option>
                     <option value="number">Number</option>
                     <option value="boolean">Boolean (True/False)</option>
                     <option value="datetime">Date/Time (Dynamic)</option>
@@ -177,27 +202,36 @@ const ConstantNodeConfig = ({ config, onChange }) => {
 
             <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Target Field <span className="text-xs text-gray-400">(optional)</span>
+                    Target Field {!hasRelevantConnection && <span className="text-xs text-gray-400">(connect to a node first)</span>}
                 </label>
-                <select
-                    value={targetField}
-                    onChange={(e) => setTargetField(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                    <optgroup label="General">
-                        <option value="">None (pass value only)</option>
-                    </optgroup>
-                    <optgroup label="Google Calendar Fields">
-                        {TARGET_FIELD_OPTIONS.filter(o => o.group === 'Calendar').map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                            </option>
-                        ))}
-                    </optgroup>
-                </select>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    When connected to a Calendar node, this value will be mapped to the selected field.
-                </p>
+                {hasRelevantConnection ? (
+                    <>
+                        <div className="mb-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded text-xs text-green-700 dark:text-green-400">
+                            Connected to: <strong>{availableFields.map(f => f.label).join(', ')}</strong> - select which field to populate
+                        </div>
+                        <select
+                            value={targetField}
+                            onChange={(e) => setTargetField(e.target.value)}
+                            className="w-full px-3 py-2 border border-green-300 dark:border-green-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        >
+                            <option value="">-- Select target field --</option>
+                            {/* Dynamically show fields for all connected node types */}
+                            {availableFields.map((nodeConfig) => (
+                                <optgroup key={nodeConfig.nodeType} label={nodeConfig.label}>
+                                    {nodeConfig.fields.map((field) => (
+                                        <option key={field.value} value={field.value}>
+                                            {field.label}
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            ))}
+                        </select>
+                    </>
+                ) : (
+                    <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-500 dark:text-gray-400">
+                        Connect this node to an action (Calendar, Email, API, etc.) to see available target fields.
+                    </div>
+                )}
             </div>
 
             {valueType === 'datetime' ? (
@@ -275,6 +309,13 @@ const ConstantNodeConfig = ({ config, onChange }) => {
                             placeholder="Enter a number"
                             step="any"
                         />
+                    ) : valueType === 'richtext' ? (
+                        <RichTextEditor
+                            value={value}
+                            onChange={setValue}
+                            placeholder="Enter formatted content... Type @ to reference other nodes"
+                            availableNodes={availableNodesForMention}
+                        />
                     ) : (
                         <textarea
                             value={value}
@@ -291,16 +332,26 @@ const ConstantNodeConfig = ({ config, onChange }) => {
                 <p className="text-xs font-medium text-purple-900 dark:text-purple-300 mb-1">
                     {valueType === 'datetime' ? 'Preview (calculated at runtime):' : 'Current Value:'}
                 </p>
-                <p className="text-sm text-purple-800 dark:text-purple-400 font-mono break-all">
-                    {valueType === 'string' && `"${value}"`}
-                    {valueType === 'number' && convertValue(value, 'number')}
-                    {valueType === 'boolean' && String(convertValue(value, 'boolean'))}
-                    {valueType === 'datetime' && getDatetimePreview()}
-                </p>
+                {valueType === 'richtext' ? (
+                    <div
+                        className="text-sm text-purple-800 dark:text-purple-400 prose prose-sm dark:prose-invert max-w-none [&_*]:my-1"
+                        dangerouslySetInnerHTML={{ __html: value || '<em>Empty</em>' }}
+                    />
+                ) : (
+                    <p className="text-sm text-purple-800 dark:text-purple-400 font-mono break-all">
+                        {valueType === 'string' && `"${value}"`}
+                        {valueType === 'number' && convertValue(value, 'number')}
+                        {valueType === 'boolean' && String(convertValue(value, 'boolean'))}
+                        {valueType === 'datetime' && getDatetimePreview()}
+                    </p>
+                )}
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                     Type: <span className="font-semibold">{valueType}</span>
                     {valueType === 'datetime' && datetimeOption !== 'fixed' && (
                         <span className="ml-2 text-green-600 dark:text-green-400">(dynamic - recalculated each run)</span>
+                    )}
+                    {valueType === 'richtext' && (
+                        <span className="ml-2 text-blue-600 dark:text-blue-400">(HTML formatted)</span>
                     )}
                 </p>
             </div>

@@ -73,19 +73,19 @@ const DynamicField = ({ label, value, onChange, type = 'text', placeholder, isDy
                     )}
                 </div>
             ) : (
-                type === 'datetime' ? (
-                    <input
-                        type="datetime-local"
-                        value={safeValue}
-                        onChange={(e) => onChange(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        placeholder={placeholder}
-                    />
-                ) : type === 'textarea' ? (
+                type === 'textarea' ? (
                     <textarea
                         value={safeValue}
                         onChange={(e) => onChange(e.target.value)}
-                        rows="2"
+                        rows="3"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder={placeholder}
+                    />
+                ) : type === 'number' ? (
+                    <input
+                        type="number"
+                        value={safeValue}
+                        onChange={(e) => onChange(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         placeholder={placeholder}
                     />
@@ -105,16 +105,14 @@ const DynamicField = ({ label, value, onChange, type = 'text', placeholder, isDy
 
 // Target field labels for display
 const TARGET_FIELD_LABELS = {
-    summary: 'Event Title',
-    description: 'Description',
-    location: 'Location',
-    startDateTime: 'Start Date/Time',
-    endDateTime: 'End Date/Time',
-    attendees: 'Attendees',
-    eventId: 'Event ID',
+    title: 'Document Title',
+    content: 'Content',
+    documentId: 'Document ID',
+    searchText: 'Search Text',
+    insertIndex: 'Insert Index',
 };
 
-const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], edges = [] }) => {
+const GoogleDocsConfig = ({ config, onChange, teamId, nodeId, nodes = [], edges = [] }) => {
     // Find connected Constant nodes with their targetField settings
     const availableInputs = useMemo(() => {
         if (!nodeId || !edges.length || !nodes.length) return [];
@@ -143,20 +141,20 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
             .filter(Boolean);
     }, [nodeId, nodes, edges]);
 
-    // Find connected Calendar nodes that can provide eventId
-    const connectedCalendarNode = useMemo(() => {
+    // Find connected Docs nodes that can provide documentId
+    const connectedDocsNode = useMemo(() => {
         if (!nodeId || !edges.length || !nodes.length) return null;
 
         // Get edges where this node is the target
         const incomingEdges = edges.filter(edge => edge.target === nodeId);
 
-        // Find any source node that is a googleCalendarAction
+        // Find any source node that is a googleDocsAction
         for (const edge of incomingEdges) {
             const sourceNode = nodes.find(n => n.id === edge.source);
-            if (sourceNode && sourceNode.data?.type === 'googleCalendarAction') {
+            if (sourceNode && sourceNode.data?.type === 'googleDocsAction') {
                 return {
                     nodeId: sourceNode.id,
-                    nodeLabel: sourceNode.data?.label || 'Google Calendar',
+                    nodeLabel: sourceNode.data?.label || 'Google Docs',
                     operation: sourceNode.data?.config?.operation || 'unknown',
                 };
             }
@@ -165,65 +163,38 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
         return null;
     }, [nodeId, nodes, edges]);
 
-    // Detect if a Delete node is connected as input (warning: deleted events can't be used)
-    const connectedDeleteNode = useMemo(() => {
-        if (!nodeId || !edges.length || !nodes.length) return null;
-
-        const incomingEdges = edges.filter(edge => edge.target === nodeId);
-        for (const edge of incomingEdges) {
-            const sourceNode = nodes.find(n => n.id === edge.source);
-            if (sourceNode?.data?.type === 'googleCalendarAction' &&
-                sourceNode?.data?.config?.operation === 'delete') {
-                return {
-                    nodeId: sourceNode.id,
-                    nodeLabel: sourceNode.data?.label || 'Delete Calendar Event',
-                };
-            }
-        }
-        return null;
-    }, [nodeId, nodes, edges]);
-
     const [operation, setOperation] = useState(config.operation || 'create');
-    const [calendarId, setCalendarId] = useState(config.calendarId || 'primary');
-    const [summary, setSummary] = useState(config.summary || '');
-    const [description, setDescription] = useState(config.description || '');
-    const [location, setLocation] = useState(config.location || '');
-    const [startDateTime, setStartDateTime] = useState(config.startDateTime || '');
-    const [endDateTime, setEndDateTime] = useState(config.endDateTime || '');
-    const [attendees, setAttendees] = useState(config.attendees || '');
-    const [eventId, setEventId] = useState(config.eventId || '');
-    const [timeMin, setTimeMin] = useState(config.timeMin || '');
-    const [timeMax, setTimeMax] = useState(config.timeMax || '');
-    const [maxResults, setMaxResults] = useState(config.maxResults || 10);
+    const [documentId, setDocumentId] = useState(config.documentId || '');
+    const [title, setTitle] = useState(config.title || '');
+    const [content, setContent] = useState(config.content || '');
+    const [updateOperation, setUpdateOperation] = useState(config.updateOperation || 'append');
+    const [searchText, setSearchText] = useState(config.searchText || '');
+    const [insertIndex, setInsertIndex] = useState(config.insertIndex || 1);
+    const [maxResults, setMaxResults] = useState(config.maxResults || 20);
 
     // Dynamic field toggles
     const [dynamicFields, setDynamicFields] = useState(config.dynamicFields || {});
 
-    const [calendars, setCalendars] = useState([]);
-    const [events, setEvents] = useState([]);
-    const [eventsLoading, setEventsLoading] = useState(false);
+    const [documents, setDocuments] = useState([]);
+    const [documentsLoading, setDocumentsLoading] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState(null);
     const [loading, setLoading] = useState(true);
     const [connectingUrl, setConnectingUrl] = useState(null);
-    // eventIdMode: 'dynamic' (from connected Calendar node), 'list' (select from dropdown), 'manual' (enter directly)
-    const [eventIdMode, setEventIdMode] = useState(config.eventIdMode || (connectedCalendarNode ? 'dynamic' : 'list'));
+    // documentIdMode: 'dynamic' (from connected Docs node), 'list' (select from dropdown), 'manual' (enter directly)
+    const [documentIdMode, setDocumentIdMode] = useState(config.documentIdMode || (connectedDocsNode ? 'dynamic' : 'list'));
 
     useEffect(() => {
         setOperation(config.operation || 'create');
-        setCalendarId(config.calendarId || 'primary');
-        setSummary(config.summary || '');
-        setDescription(config.description || '');
-        setLocation(config.location || '');
-        setStartDateTime(config.startDateTime || '');
-        setEndDateTime(config.endDateTime || '');
-        setAttendees(config.attendees || '');
-        setEventId(config.eventId || '');
-        setTimeMin(config.timeMin || '');
-        setTimeMax(config.timeMax || '');
-        setMaxResults(config.maxResults || 10);
+        setDocumentId(config.documentId || '');
+        setTitle(config.title || '');
+        setContent(config.content || '');
+        setUpdateOperation(config.updateOperation || 'append');
+        setSearchText(config.searchText || '');
+        setInsertIndex(config.insertIndex || 1);
+        setMaxResults(config.maxResults || 20);
         setDynamicFields(config.dynamicFields || {});
-        setEventIdMode(config.eventIdMode || (connectedCalendarNode ? 'dynamic' : 'list'));
-    }, [config, connectedCalendarNode]);
+        setDocumentIdMode(config.documentIdMode || (connectedDocsNode ? 'dynamic' : 'list'));
+    }, [config, connectedDocsNode]);
 
     // Helper to toggle dynamic state for a field
     const toggleDynamic = (fieldName, isDynamic) => {
@@ -246,7 +217,7 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
                     // Refresh connection status after successful OAuth
                     checkConnectionStatus();
                 } else {
-                    alert(event.data.message || 'Failed to connect Google Calendar');
+                    alert(event.data.message || 'Failed to connect Google');
                 }
             }
         };
@@ -257,42 +228,34 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
 
     useEffect(() => {
         if (connectionStatus?.connected && teamId) {
-            fetchCalendars();
+            fetchDocuments();
         }
     }, [connectionStatus?.connected, teamId]);
 
     useEffect(() => {
         onChange({
             operation,
-            calendarId,
-            summary,
-            description,
-            location,
-            startDateTime,
-            endDateTime,
-            attendees,
-            eventId: eventIdMode === 'dynamic' ? '' : eventId, // Clear eventId when dynamic mode is active
-            timeMin,
-            timeMax,
-            maxResults: parseInt(maxResults) || 10,
+            documentId: documentIdMode === 'dynamic' ? '' : documentId,
+            title,
+            content,
+            updateOperation,
+            searchText,
+            insertIndex: parseInt(insertIndex) || 1,
+            maxResults: parseInt(maxResults) || 20,
             dynamicFields,
-            eventIdMode,
+            documentIdMode,
         });
     }, [
         operation,
-        calendarId,
-        summary,
-        description,
-        location,
-        startDateTime,
-        endDateTime,
-        attendees,
-        eventId,
-        timeMin,
-        timeMax,
-        dynamicFields,
+        documentId,
+        title,
+        content,
+        updateOperation,
+        searchText,
+        insertIndex,
         maxResults,
-        eventIdMode,
+        dynamicFields,
+        documentIdMode,
     ]);
 
     const checkConnectionStatus = async () => {
@@ -310,53 +273,34 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
         }
     };
 
-    const fetchCalendars = async () => {
-        try {
-            const response = await fetch(`/api/google/calendars?team_id=${teamId}`);
-            if (response.ok) {
-                const data = await response.json();
-                setCalendars(data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch calendars:', error);
-        }
-    };
-
-    const fetchEvents = async () => {
+    const fetchDocuments = async () => {
         if (!connectionStatus?.connected || !teamId) return;
 
         try {
-            setEventsLoading(true);
-            // Get events from 30 days ago to include recent past events
-            const timeMin = new Date();
-            timeMin.setDate(timeMin.getDate() - 30);
-
+            setDocumentsLoading(true);
             const params = new URLSearchParams({
                 team_id: teamId,
-                calendar_id: calendarId,
                 max_results: '50',
-                time_min: timeMin.toISOString(),
             });
 
-            const response = await fetch(`/api/google/events?${params}`);
+            const response = await fetch(`/api/google/documents?${params}`);
             if (response.ok) {
                 const data = await response.json();
-                // Backend returns array directly, not wrapped in 'items'
-                setEvents(Array.isArray(data) ? data : []);
+                setDocuments(data.documents || []);
             }
         } catch (error) {
-            console.error('Failed to fetch events:', error);
+            console.error('Failed to fetch documents:', error);
         } finally {
-            setEventsLoading(false);
+            setDocumentsLoading(false);
         }
     };
 
-    // Fetch events when calendar changes and operation needs events
+    // Fetch documents when operation needs them
     useEffect(() => {
-        if ((operation === 'update' || operation === 'delete') && connectionStatus?.connected) {
-            fetchEvents();
+        if ((operation === 'read' || operation === 'update') && connectionStatus?.connected) {
+            fetchDocuments();
         }
-    }, [calendarId, operation, connectionStatus?.connected]);
+    }, [operation, connectionStatus?.connected]);
 
     const handleConnect = async () => {
         try {
@@ -372,7 +316,7 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
     };
 
     const handleDisconnect = async () => {
-        if (!confirm('Are you sure you want to disconnect Google Calendar?')) {
+        if (!confirm('Are you sure you want to disconnect Google?')) {
             return;
         }
 
@@ -387,7 +331,7 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
 
             if (response.ok) {
                 setConnectionStatus({ connected: false });
-                setCalendars([]);
+                setDocuments([]);
             }
         } catch (error) {
             console.error('Failed to disconnect:', error);
@@ -407,7 +351,7 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
         return (
             <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded">
                 <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                    Please save the workflow first to enable Google Calendar configuration.
+                    Please save the workflow first to enable Google Docs configuration.
                 </p>
             </div>
         );
@@ -419,37 +363,22 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
                 <div className="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">
                     <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 bg-white rounded-lg shadow flex items-center justify-center">
-                            <svg
-                                className="w-6 h-6"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z"
-                                    stroke="#4285f4"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                                <path
-                                    d="M16 2V6M8 2V6M3 10H21"
-                                    stroke="#4285f4"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
+                            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="#4285f4" strokeWidth="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="16" y1="13" x2="8" y2="13" />
+                                <line x1="16" y1="17" x2="8" y2="17" />
                             </svg>
                         </div>
                         <div>
                             <h4 className="font-medium text-gray-900 dark:text-white">
-                                Google Calendar
+                                Google Docs
                             </h4>
                             <p className="text-sm text-gray-500 dark:text-gray-400">Not connected</p>
                         </div>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Connect your Google Calendar to create, update, and manage events directly from
+                        Connect your Google account to create, read, and update documents directly from
                         your workflows.
                     </p>
                     <button
@@ -474,7 +403,7 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
                                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                             />
                         </svg>
-                        Connect Google Calendar
+                        Connect Google Docs
                     </button>
                 </div>
                 {connectingUrl && (
@@ -528,55 +457,19 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
                     onChange={(e) => setOperation(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                    <option value="create">Create Event</option>
-                    <option value="list">List Events</option>
-                    <option value="update">Update Event</option>
-                    <option value="delete">Delete Event</option>
+                    <option value="create">Create Document</option>
+                    <option value="read">Read Document</option>
+                    <option value="update">Update Document</option>
+                    <option value="list">List Documents</option>
                 </select>
             </div>
 
-            {/* Warning when Delete node is connected to Update/Delete operations */}
-            {connectedDeleteNode && (operation === 'update' || operation === 'delete') && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded">
-                    <div className="flex items-start gap-2">
-                        <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <div>
-                            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                                Delete node csatlakoztatva
-                            </p>
-                            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                                A "{connectedDeleteNode.nodeLabel}" node törli az eseményt. A törölt esemény ID-ja nem használható további műveletekhez.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Calendar
-                </label>
-                <select
-                    value={calendarId}
-                    onChange={(e) => setCalendarId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                    <option value="primary">Primary Calendar</option>
-                    {calendars.map((cal) => (
-                        <option key={cal.id} value={cal.id}>
-                            {cal.summary}
-                        </option>
-                    ))}
-                </select>
-            </div>
-
-            {(operation === 'update' || operation === 'delete') && (
+            {/* Document ID selector for read/update operations */}
+            {(operation === 'read' || operation === 'update') && (
                 <div>
                     <div className="flex items-center justify-between mb-2">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Event ID Source
+                            Document ID Source
                         </label>
                     </div>
 
@@ -584,24 +477,24 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
                     <div className="flex gap-1 mb-2">
                         <button
                             type="button"
-                            onClick={() => setEventIdMode('dynamic')}
-                            disabled={!connectedCalendarNode}
+                            onClick={() => setDocumentIdMode('dynamic')}
+                            disabled={!connectedDocsNode}
                             className={`flex-1 px-2 py-1.5 text-xs rounded transition-colors ${
-                                eventIdMode === 'dynamic'
+                                documentIdMode === 'dynamic'
                                     ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 font-medium'
-                                    : connectedCalendarNode
+                                    : connectedDocsNode
                                         ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                                         : 'bg-gray-50 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed'
                             }`}
-                            title={connectedCalendarNode ? 'Use ID from connected Calendar node' : 'Connect a Calendar node first'}
+                            title={connectedDocsNode ? 'Use ID from connected Docs node' : 'Connect a Docs node first'}
                         >
                             Dynamic
                         </button>
                         <button
                             type="button"
-                            onClick={() => setEventIdMode('list')}
+                            onClick={() => setDocumentIdMode('list')}
                             className={`flex-1 px-2 py-1.5 text-xs rounded transition-colors ${
-                                eventIdMode === 'list'
+                                documentIdMode === 'list'
                                     ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 font-medium'
                                     : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                             }`}
@@ -610,9 +503,9 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
                         </button>
                         <button
                             type="button"
-                            onClick={() => setEventIdMode('manual')}
+                            onClick={() => setDocumentIdMode('manual')}
                             className={`flex-1 px-2 py-1.5 text-xs rounded transition-colors ${
-                                eventIdMode === 'manual'
+                                documentIdMode === 'manual'
                                     ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium'
                                     : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                             }`}
@@ -621,59 +514,57 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
                         </button>
                     </div>
 
-                    {/* Dynamic mode - from connected Calendar node */}
-                    {eventIdMode === 'dynamic' && (
+                    {/* Dynamic mode - from connected Docs node */}
+                    {documentIdMode === 'dynamic' && (
                         <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded">
-                            {connectedCalendarNode ? (
+                            {connectedDocsNode ? (
                                 <div className="flex items-center gap-2">
                                     <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                     </svg>
                                     <div>
                                         <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                                            Using ID from: {connectedCalendarNode.nodeLabel}
+                                            Using ID from: {connectedDocsNode.nodeLabel}
                                         </p>
                                         <p className="text-xs text-purple-600 dark:text-purple-400">
-                                            Operation: {connectedCalendarNode.operation}
+                                            Operation: {connectedDocsNode.operation}
                                         </p>
                                     </div>
                                 </div>
                             ) : (
                                 <p className="text-sm text-purple-700 dark:text-purple-400">
-                                    Connect a Calendar node to use its output event ID.
+                                    Connect a Docs node to use its output document ID.
                                 </p>
                             )}
                         </div>
                     )}
 
                     {/* List mode - select from dropdown */}
-                    {eventIdMode === 'list' && (
+                    {documentIdMode === 'list' && (
                         <>
                             <div className="relative">
                                 <select
-                                    value={eventId}
-                                    onChange={(e) => setEventId(e.target.value)}
+                                    value={documentId}
+                                    onChange={(e) => setDocumentId(e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                    disabled={eventsLoading}
+                                    disabled={documentsLoading}
                                 >
                                     <option value="">
-                                        {eventsLoading ? 'Loading events...' : 'Select an event'}
+                                        {documentsLoading ? 'Loading documents...' : 'Select a document'}
                                     </option>
-                                    {events.map((event) => (
-                                        <option key={event.id} value={event.id}>
-                                            {event.summary || '(No title)'} -{' '}
-                                            {event.start
-                                                ? new Date(event.start).toLocaleDateString('hu-HU', {
+                                    {documents.map((doc) => (
+                                        <option key={doc.id} value={doc.id}>
+                                            {doc.name || '(Untitled)'} -{' '}
+                                            {doc.modifiedTime
+                                                ? new Date(doc.modifiedTime).toLocaleDateString('hu-HU', {
                                                       month: 'short',
                                                       day: 'numeric',
-                                                      hour: '2-digit',
-                                                      minute: '2-digit',
                                                   })
                                                 : 'No date'}
                                         </option>
                                     ))}
                                 </select>
-                                {eventsLoading && (
+                                {documentsLoading && (
                                     <div className="absolute right-8 top-1/2 transform -translate-y-1/2">
                                         <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
                                     </div>
@@ -681,13 +572,13 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
                             </div>
                             <div className="flex items-center justify-between mt-1">
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    Showing up to 50 upcoming events
+                                    Showing up to 50 documents
                                 </p>
                                 <button
                                     type="button"
-                                    onClick={fetchEvents}
+                                    onClick={fetchDocuments}
                                     className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                                    disabled={eventsLoading}
+                                    disabled={documentsLoading}
                                 >
                                     Refresh
                                 </button>
@@ -695,67 +586,26 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
                         </>
                     )}
 
-                    {/* Manual mode - enter event ID directly */}
-                    {eventIdMode === 'manual' && (
+                    {/* Manual mode - enter document ID directly */}
+                    {documentIdMode === 'manual' && (
                         <>
                             <input
                                 type="text"
-                                value={eventId}
-                                onChange={(e) => setEventId(e.target.value)}
+                                value={documentId}
+                                onChange={(e) => setDocumentId(e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                placeholder="Enter event ID"
+                                placeholder="Enter document ID"
                             />
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Enter the event ID directly
+                                Enter the document ID directly (from URL or another source)
                             </p>
                         </>
                     )}
                 </div>
             )}
 
-            {operation === 'list' && (
-                <>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                From
-                            </label>
-                            <input
-                                type="datetime-local"
-                                value={timeMin}
-                                onChange={(e) => setTimeMin(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                To
-                            </label>
-                            <input
-                                type="datetime-local"
-                                value={timeMax}
-                                onChange={(e) => setTimeMax(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                            />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                            Max Results
-                        </label>
-                        <input
-                            type="number"
-                            min="1"
-                            max="100"
-                            value={maxResults}
-                            onChange={(e) => setMaxResults(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                    </div>
-                </>
-            )}
-
-            {(operation === 'create' || operation === 'update') && (
+            {/* Create operation fields */}
+            {operation === 'create' && (
                 <>
                     {availableInputs.length > 0 && (
                         <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded mb-3">
@@ -765,7 +615,7 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
                             <ul className="text-xs text-green-600 dark:text-green-500 space-y-0.5">
                                 {availableInputs.map(input => (
                                     <li key={input.nodeId}>
-                                        {input.nodeLabel} → {input.targetFieldLabel}
+                                        {input.nodeLabel} &rarr; {input.targetFieldLabel}
                                     </li>
                                 ))}
                             </ul>
@@ -773,72 +623,126 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
                     )}
 
                     <DynamicField
-                        label="Event Title"
-                        value={summary}
-                        onChange={setSummary}
+                        label="Document Title"
+                        value={title}
+                        onChange={setTitle}
                         type="text"
-                        placeholder="Meeting with team"
-                        isDynamic={dynamicFields.summary}
-                        onDynamicChange={(v) => toggleDynamic('summary', v)}
-                        availableInputs={availableInputs.filter(i => i.targetField === 'summary')}
+                        placeholder="My Document"
+                        isDynamic={dynamicFields.title}
+                        onDynamicChange={(v) => toggleDynamic('title', v)}
+                        availableInputs={availableInputs.filter(i => i.targetField === 'title')}
                     />
 
                     <DynamicField
-                        label="Description"
-                        value={description}
-                        onChange={setDescription}
+                        label="Initial Content (optional)"
+                        value={content}
+                        onChange={setContent}
                         type="textarea"
-                        placeholder="Event description..."
-                        isDynamic={dynamicFields.description}
-                        onDynamicChange={(v) => toggleDynamic('description', v)}
-                        availableInputs={availableInputs.filter(i => i.targetField === 'description')}
-                    />
-
-                    <DynamicField
-                        label="Location"
-                        value={location}
-                        onChange={setLocation}
-                        type="text"
-                        placeholder="Conference room or address"
-                        isDynamic={dynamicFields.location}
-                        onDynamicChange={(v) => toggleDynamic('location', v)}
-                        availableInputs={availableInputs.filter(i => i.targetField === 'location')}
-                    />
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <DynamicField
-                            label="Start Date/Time"
-                            value={startDateTime}
-                            onChange={setStartDateTime}
-                            type="datetime"
-                            isDynamic={dynamicFields.startDateTime}
-                            onDynamicChange={(v) => toggleDynamic('startDateTime', v)}
-                            availableInputs={availableInputs.filter(i => i.targetField === 'startDateTime')}
-                        />
-                        <DynamicField
-                            label="End Date/Time"
-                            value={endDateTime}
-                            onChange={setEndDateTime}
-                            type="datetime"
-                            isDynamic={dynamicFields.endDateTime}
-                            onDynamicChange={(v) => toggleDynamic('endDateTime', v)}
-                            availableInputs={availableInputs.filter(i => i.targetField === 'endDateTime')}
-                        />
-                    </div>
-
-                    <DynamicField
-                        label="Attendees (comma-separated emails)"
-                        value={attendees}
-                        onChange={setAttendees}
-                        type="textarea"
-                        placeholder="user@example.com, other@example.com"
-                        isDynamic={dynamicFields.attendees}
-                        onDynamicChange={(v) => toggleDynamic('attendees', v)}
-                        availableInputs={availableInputs.filter(i => i.targetField === 'attendees')}
+                        placeholder="Enter initial document content..."
+                        isDynamic={dynamicFields.content}
+                        onDynamicChange={(v) => toggleDynamic('content', v)}
+                        availableInputs={availableInputs.filter(i => i.targetField === 'content')}
                     />
                 </>
             )}
 
+            {/* Update operation fields */}
+            {operation === 'update' && (
+                <>
+                    <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                            Update Operation
+                        </label>
+                        <select
+                            value={updateOperation}
+                            onChange={(e) => setUpdateOperation(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        >
+                            <option value="append">Append to End</option>
+                            <option value="prepend">Prepend to Beginning</option>
+                            <option value="replace">Find and Replace</option>
+                            <option value="insertAt">Insert at Index</option>
+                        </select>
+                    </div>
+
+                    {availableInputs.length > 0 && (
+                        <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded mb-3">
+                            <p className="text-xs text-green-700 dark:text-green-400 mb-1">
+                                <strong>Connected inputs:</strong>
+                            </p>
+                            <ul className="text-xs text-green-600 dark:text-green-500 space-y-0.5">
+                                {availableInputs.map(input => (
+                                    <li key={input.nodeId}>
+                                        {input.nodeLabel} &rarr; {input.targetFieldLabel}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    <DynamicField
+                        label="Content"
+                        value={content}
+                        onChange={setContent}
+                        type="textarea"
+                        placeholder="Content to add or replace with..."
+                        isDynamic={dynamicFields.content}
+                        onDynamicChange={(v) => toggleDynamic('content', v)}
+                        availableInputs={availableInputs.filter(i => i.targetField === 'content')}
+                    />
+
+                    {updateOperation === 'replace' && (
+                        <DynamicField
+                            label="Search Text"
+                            value={searchText}
+                            onChange={setSearchText}
+                            type="text"
+                            placeholder="Text to find and replace"
+                            isDynamic={dynamicFields.searchText}
+                            onDynamicChange={(v) => toggleDynamic('searchText', v)}
+                            availableInputs={availableInputs.filter(i => i.targetField === 'searchText')}
+                        />
+                    )}
+
+                    {updateOperation === 'insertAt' && (
+                        <div>
+                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                Insert Index
+                            </label>
+                            <input
+                                type="number"
+                                min="1"
+                                value={insertIndex}
+                                onChange={(e) => setInsertIndex(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                placeholder="1"
+                            />
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Character index where to insert content (1 = beginning)
+                            </p>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* List operation fields */}
+            {operation === 'list' && (
+                <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                        Max Results
+                    </label>
+                    <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={maxResults}
+                        onChange={(e) => setMaxResults(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                </div>
+            )}
+
+            {/* Configuration Preview */}
             <div className="bg-white dark:bg-gray-800 p-3 rounded border border-blue-300 dark:border-blue-600">
                 <p className="text-xs font-medium text-blue-900 dark:text-blue-300 mb-2">
                     Configuration Preview:
@@ -847,18 +751,24 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
                     <p>
                         <strong>Operation:</strong> {operation}
                     </p>
-                    <p>
-                        <strong>Calendar:</strong>{' '}
-                        {calendars.find((c) => c.id === calendarId)?.summary || calendarId}
-                    </p>
-                    {operation === 'create' && summary && (
+                    {operation === 'create' && title && (
                         <p>
-                            <strong>Event:</strong> {summary}
+                            <strong>Title:</strong> {title}
                         </p>
                     )}
-                    {(operation === 'update' || operation === 'delete') && eventId && (
+                    {(operation === 'read' || operation === 'update') && documentId && (
                         <p>
-                            <strong>Event ID:</strong> {eventId}
+                            <strong>Document ID:</strong> {documentId.substring(0, 20)}...
+                        </p>
+                    )}
+                    {operation === 'update' && (
+                        <p>
+                            <strong>Update Type:</strong> {updateOperation}
+                        </p>
+                    )}
+                    {operation === 'list' && (
+                        <p>
+                            <strong>Max Results:</strong> {maxResults}
                         </p>
                     )}
                 </div>
@@ -873,4 +783,4 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
     );
 };
 
-export default GoogleCalendarConfig;
+export default GoogleDocsConfig;

@@ -6,6 +6,9 @@ import ApiCallConfig from '../actions/ApiCallConfig';
 import EmailActionConfig from '../actions/EmailActionConfig';
 import DatabaseConfig from '../actions/DatabaseConfig';
 import GoogleCalendarConfig from '../actions/GoogleCalendarConfig';
+import GoogleDocsConfig from '../actions/GoogleDocsConfig';
+import MergeNodeConfig from '../actions/MergeNodeConfig';
+import TemplateNodeConfig from '../actions/TemplateNodeConfig';
 
 const WorkflowPropertiesPanel = ({
     selectedNode,
@@ -23,7 +26,19 @@ const WorkflowPropertiesPanel = ({
     deleteNodeConnections,
     deleteSelectedEdge,
     teamId,
+    nodes = [],
+    edges = [],
+    onUpdateNodeInputs,
 }) => {
+    // Find connected target node types for constant nodes
+    const getConnectedNodeTypes = (nodeId) => {
+        const outgoingEdges = edges.filter(edge => edge.source === nodeId);
+        const connectedTypes = outgoingEdges.map(edge => {
+            const targetNode = nodes.find(n => n.id === edge.target);
+            return targetNode?.data?.type || targetNode?.type;
+        }).filter(Boolean);
+        return [...new Set(connectedTypes)]; // Remove duplicates
+    };
     return (
         <div className="w-80 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-4 h-[600px] overflow-y-auto">
             {selectedNode ? (
@@ -85,7 +100,15 @@ const WorkflowPropertiesPanel = ({
                                 return <StartNodeConfig config={parsedConfig} onChange={configChangeHandler} />;
 
                             case 'constant':
-                                return <ConstantNodeConfig config={parsedConfig} onChange={configChangeHandler} />;
+                                return (
+                                    <ConstantNodeConfig
+                                        config={parsedConfig}
+                                        onChange={configChangeHandler}
+                                        connectedNodeTypes={getConnectedNodeTypes(selectedNode.id)}
+                                        nodes={nodes}
+                                        currentNodeId={selectedNode.id}
+                                    />
+                                );
 
                             case 'apiAction':
                                 return (
@@ -185,8 +208,64 @@ const WorkflowPropertiesPanel = ({
                                             config={parsedConfig}
                                             onChange={configChangeHandler}
                                             teamId={teamId}
+                                            nodeId={selectedNode.id}
+                                            nodes={nodes}
+                                            edges={edges}
                                         />
                                     </div>
+                                );
+
+                            case 'googleDocsAction':
+                                return (
+                                    <div className="space-y-4">
+                                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-3">
+                                            <h5 className="font-semibold text-sm text-blue-800 dark:text-blue-400 mb-2">
+                                                📄 Google Docs Configuration
+                                            </h5>
+                                            <p className="text-xs text-blue-600 dark:text-blue-500">
+                                                Create, read, update, or list Google Documents
+                                            </p>
+                                        </div>
+                                        <GoogleDocsConfig
+                                            config={parsedConfig}
+                                            onChange={configChangeHandler}
+                                            teamId={teamId}
+                                            nodeId={selectedNode.id}
+                                            nodes={nodes}
+                                            edges={edges}
+                                        />
+                                    </div>
+                                );
+
+                            case 'merge':
+                                return (
+                                    <MergeNodeConfig
+                                        config={parsedConfig}
+                                        onChange={configChangeHandler}
+                                        inputs={selectedNode.data?.inputs || ['input-1', 'input-2']}
+                                        onInputsChange={(newInputs) => {
+                                            // Update the node's inputs in parent state
+                                            if (onUpdateNodeInputs) {
+                                                onUpdateNodeInputs(selectedNode.id, newInputs);
+                                            }
+                                        }}
+                                    />
+                                );
+
+                            case 'template':
+                                return (
+                                    <TemplateNodeConfig
+                                        config={parsedConfig}
+                                        onChange={configChangeHandler}
+                                        inputs={selectedNode.data?.inputs || ['input-1', 'input-2']}
+                                        onInputsChange={(newInputs) => {
+                                            // Update the node's inputs in parent state
+                                            if (onUpdateNodeInputs) {
+                                                onUpdateNodeInputs(selectedNode.id, newInputs);
+                                            }
+                                        }}
+                                        connectedNodeTypes={getConnectedNodeTypes(selectedNode.id)}
+                                    />
                                 );
 
                             default:

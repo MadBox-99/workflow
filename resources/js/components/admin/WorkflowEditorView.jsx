@@ -6,9 +6,10 @@ import WorkflowForm from './WorkflowForm';
 // Map data types to React Flow node types
 const getReactFlowNodeType = (dataType) => {
     if (dataType === 'googleCalendarAction') return 'googleCalendar';
+    if (dataType === 'googleDocsAction') return 'googleDocs';
     const actionTypes = ['apiAction', 'emailAction', 'databaseAction', 'scriptAction', 'webhookAction', 'action'];
     if (actionTypes.includes(dataType)) return 'action';
-    if (['start', 'end', 'condition', 'constant', 'branch', 'join'].includes(dataType)) return dataType;
+    if (['start', 'end', 'condition', 'constant', 'branch', 'join', 'merge', 'template'].includes(dataType)) return dataType;
     return 'action'; // fallback for old 'custom' nodes
 };
 
@@ -22,7 +23,13 @@ const getNodeDimensions = (dataType) => {
             return { width: 120, height: 50 };
         case 'constant':
             return { width: 140, height: 60 };
+        case 'branch':
+        case 'join':
+        case 'merge':
+        case 'template':
+            return { width: 220, height: 90 };
         case 'googleCalendarAction':
+        case 'googleDocsAction':
             return { width: 240, height: 80 };
         default:
             return { width: 180, height: 70 };

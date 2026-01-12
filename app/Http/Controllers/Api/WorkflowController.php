@@ -263,7 +263,9 @@ class WorkflowController extends Controller
         if (! $team) {
             return response()->json([]);
         }
-
+        /**
+         * @var Team $team
+         */
         $options = $team->availableScheduleOptions()
             ->get()
             ->map(fn ($option) => [
@@ -347,6 +349,68 @@ class WorkflowController extends Controller
                 ),
                 'delete' => $calendarService->deleteEvent($team, $calendarId, $validated['eventId'] ?? ''),
             };
+
+            return response()->json([
+                'success' => true,
+                'data' => $result,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function executeGoogleDocs(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'team_id' => 'required|exists:teams,id',
+            'operation' => 'required|in:create,read,update,list',
+            'documentId' => 'nullable|string',
+            'title' => 'nullable|string',
+            'content' => 'nullable|string',
+            'updateOperation' => 'nullable|in:append,prepend,replace,insertAt',
+            'searchText' => 'nullable|string',
+            'insertIndex' => 'nullable|integer',
+            'maxResults' => 'nullable|integer',
+        ]);
+
+        try {
+            $team = Team::findOrFail($validated['team_id']);
+
+            if (! $team->googleCredential) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Google is not connected for this team',
+                ], 400);
+            }
+
+            $docsService = app(\App\Services\Google\GoogleDocsService::class);
+            $operation = $validated['operation'];
+
+            $result = match ($operation) {
+                'create' => $docsService->createDocument(
+                    $team,
+                    $validated['title'] ?? 'Untitled Document',
+                    $validated['content'] ?? null
+                ),
+                'read' => $docsService->getDocument($team, $validated['documentId'] ?? ''),
+                'update' => $docsService->updateDocument($team, $validated['documentId'] ?? '', [
+                    'operation' => $validated['updateOperation'] ?? 'append',
+                    'content' => $validated['content'] ?? '',
+                    'searchText' => $validated['searchText'] ?? '',
+                    'insertIndex' => $validated['insertIndex'] ?? 1,
+                ]),
+                'list' => $docsService->listDocuments($team, [
+                    'maxResults' => $validated['maxResults'] ?? 20,
+                ]),
+            };
+
+            // Check for error response (e.g., 404)
+            if (\is_array($result) && isset($result['success']) && $result['success'] === false) {
+                return response()->json($result, 404);
+            }
 
             return response()->json([
                 'success' => true,

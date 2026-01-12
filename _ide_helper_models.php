@@ -25,6 +25,7 @@ namespace App\Models{
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Team $team
+ * @method static \Database\Factories\EmailTemplateFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|EmailTemplate newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|EmailTemplate newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|EmailTemplate query()
@@ -47,15 +48,48 @@ namespace App\Models{
 /**
  * @property int $id
  * @property string $name
+ * @property string $cron_expression
+ * @property string|null $description
+ * @property int $sort_order
+ * @property bool $is_active
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Team> $teams
+ * @property-read int|null $teams_count
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleOption active()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleOption newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleOption newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleOption ordered()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleOption query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleOption whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleOption whereCronExpression($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleOption whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleOption whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleOption whereIsActive($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleOption whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleOption whereSortOrder($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleOption whereUpdatedAt($value)
+ */
+	class ScheduleOption extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
+ * @property int $id
+ * @property string $name
  * @property string $slug
  * @property int $owner_id
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\EmailTemplate> $emailTemplates
  * @property-read int|null $email_templates_count
+ * @property-read \App\Models\TeamGoogleCredential|null $googleCredential
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $members
  * @property-read int|null $members_count
  * @property-read \App\Models\User $owner
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScheduleOption> $scheduleOptions
+ * @property-read int|null $schedule_options_count
+ * @method static \Database\Factories\TeamFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Team newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Team newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Team query()
@@ -67,6 +101,37 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Team whereUpdatedAt($value)
  */
 	class Team extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
+ * @property int $id
+ * @property int $team_id
+ * @property string $access_token
+ * @property string $refresh_token
+ * @property string $token_type
+ * @property \Illuminate\Support\Carbon|null $expires_at
+ * @property array<array-key, mixed>|null $scopes
+ * @property string|null $google_email
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Team $team
+ * @method static \Database\Factories\TeamGoogleCredentialFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TeamGoogleCredential newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TeamGoogleCredential newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TeamGoogleCredential query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TeamGoogleCredential whereAccessToken($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TeamGoogleCredential whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TeamGoogleCredential whereExpiresAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TeamGoogleCredential whereGoogleEmail($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TeamGoogleCredential whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TeamGoogleCredential whereRefreshToken($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TeamGoogleCredential whereScopes($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TeamGoogleCredential whereTeamId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TeamGoogleCredential whereTokenType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TeamGoogleCredential whereUpdatedAt($value)
+ */
+	class TeamGoogleCredential extends \Eloquent {}
 }
 
 namespace App\Models{
@@ -111,11 +176,17 @@ namespace App\Models{
  * @property array<array-key, mixed>|null $metadata
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property bool $is_scheduled
+ * @property \Illuminate\Support\Carbon|null $last_run_at
+ * @property \Illuminate\Support\Carbon|null $next_run_at
+ * @property string|null $schedule_cron
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\WorkflowConnection> $connections
  * @property-read int|null $connections_count
+ * @property-read string|null $schedule_description
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\WorkflowNode> $nodes
  * @property-read int|null $nodes_count
  * @property-read \App\Models\Team|null $team
+ * @method static \Database\Factories\WorkflowFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow query()
@@ -123,8 +194,12 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow whereDescription($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow whereIsActive($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow whereIsScheduled($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow whereLastRunAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow whereMetadata($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow whereNextRunAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow whereScheduleCron($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow whereTeamId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Workflow whereUpdatedAt($value)
  */
@@ -171,6 +246,7 @@ namespace App\Models{
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Workflow $workflow
+ * @method static \Database\Factories\WorkflowNodeFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WorkflowNode newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WorkflowNode newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WorkflowNode query()

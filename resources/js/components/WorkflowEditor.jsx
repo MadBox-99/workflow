@@ -42,6 +42,12 @@ const contextMenuIcons = {
             <path d="M12 12v6" />
         </svg>
     ),
+    merge: (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M6 3v6l6 3 6-3V3" />
+            <path d="M12 12v9" />
+        </svg>
+    ),
     end: (
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M9 12l2 2 4-4" />
@@ -67,6 +73,7 @@ const ContextMenu = ({ x, y, onClose, onAddNode }) => {
     const menuItems = [
         { type: 'start', label: 'Initial Node', icon: contextMenuIcons.start },
         { type: 'apiAction', label: 'Transform Node', icon: contextMenuIcons.apiAction },
+        { type: 'merge', label: 'Merge Node', icon: contextMenuIcons.merge },
         { type: 'join', label: 'Join Node', icon: contextMenuIcons.join },
         { type: 'branch', label: 'Branch Node', icon: contextMenuIcons.branch },
         { type: 'end', label: 'Output Node', icon: contextMenuIcons.end },
@@ -298,6 +305,12 @@ const WorkflowEditor = ({ initialNodes = [], initialEdges = [], onSave, teamId }
             nodeData.inputs = ['input-1', 'input-2'];
         }
 
+        // Add default inputs for merge nodes
+        if (nodeType === 'merge') {
+            nodeData.inputs = ['input-1', 'input-2'];
+            nodeData.config = { separator: '' };
+        }
+
         const newNode = {
             id: `${nodeType}_${Date.now()}`,
             type: nodeType,
@@ -458,6 +471,9 @@ const WorkflowEditor = ({ initialNodes = [], initialEdges = [], onSave, teamId }
                 deleteNodeConnections={deleteNodeConnections}
                 deleteSelectedEdge={deleteSelectedEdge}
                 teamId={teamId}
+                nodes={nodes}
+                edges={edges}
+                onUpdateNodeInputs={handleUpdateInputs}
             />
         </div>
     );

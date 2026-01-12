@@ -76,6 +76,11 @@ class GoogleCalendarService
 
     public function createEvent(Team $team, string $calendarId, array $eventData): array
     {
+        Log::channel('workflow')->info('GoogleCalendarService.createEvent called', [
+            'calendarId' => $calendarId,
+            'eventData' => $eventData,
+        ]);
+
         $service = $this->getCalendarService($team);
 
         $event = new Event;
@@ -88,7 +93,12 @@ class GoogleCalendarService
         if (! empty($eventData['start'])) {
             $start = new EventDateTime;
             if (isset($eventData['start']['dateTime'])) {
-                $start->setDateTime($this->formatDateTime($eventData['start']['dateTime']));
+                $formattedStart = $this->formatDateTime($eventData['start']['dateTime']);
+                Log::channel('workflow')->info('Start datetime formatted', [
+                    'original' => $eventData['start']['dateTime'],
+                    'formatted' => $formattedStart,
+                ]);
+                $start->setDateTime($formattedStart);
                 $start->setTimeZone($eventData['start']['timeZone'] ?? $timeZone);
             } elseif (isset($eventData['start']['date'])) {
                 $start->setDate($eventData['start']['date']);
@@ -99,7 +109,12 @@ class GoogleCalendarService
         if (! empty($eventData['end'])) {
             $end = new EventDateTime;
             if (isset($eventData['end']['dateTime'])) {
-                $end->setDateTime($this->formatDateTime($eventData['end']['dateTime']));
+                $formattedEnd = $this->formatDateTime($eventData['end']['dateTime']);
+                Log::channel('workflow')->info('End datetime formatted', [
+                    'original' => $eventData['end']['dateTime'],
+                    'formatted' => $formattedEnd,
+                ]);
+                $end->setDateTime($formattedEnd);
                 $end->setTimeZone($eventData['end']['timeZone'] ?? $timeZone);
             } elseif (isset($eventData['end']['date'])) {
                 $end->setDate($eventData['end']['date']);
@@ -129,64 +144,101 @@ class GoogleCalendarService
 
     public function updateEvent(Team $team, string $calendarId, string $eventId, array $eventData): array
     {
-        $service = $this->getCalendarService($team);
+        try {
+            $service = $this->getCalendarService($team);
 
-        $event = $service->events->get($calendarId, $eventId);
+            $event = $service->events->get($calendarId, $eventId);
 
-        if (isset($eventData['summary'])) {
-            $event->setSummary($eventData['summary']);
-        }
-
-        if (isset($eventData['description'])) {
-            $event->setDescription($eventData['description']);
-        }
-
-        if (isset($eventData['location'])) {
-            $event->setLocation($eventData['location']);
-        }
-
-        $timeZone = $eventData['timeZone'] ?? config('app.timezone', 'Europe/Budapest');
-
-        if (! empty($eventData['start'])) {
-            $start = new EventDateTime;
-            if (isset($eventData['start']['dateTime'])) {
-                $start->setDateTime($this->formatDateTime($eventData['start']['dateTime']));
-                $start->setTimeZone($eventData['start']['timeZone'] ?? $timeZone);
+            if (isset($eventData['summary'])) {
+                $event->setSummary($eventData['summary']);
             }
-            $event->setStart($start);
-        }
 
-        if (! empty($eventData['end'])) {
-            $end = new EventDateTime;
-            if (isset($eventData['end']['dateTime'])) {
-                $end->setDateTime($this->formatDateTime($eventData['end']['dateTime']));
-                $end->setTimeZone($eventData['end']['timeZone'] ?? $timeZone);
+            if (isset($eventData['description'])) {
+                $event->setDescription($eventData['description']);
             }
-            $event->setEnd($end);
+
+            if (isset($eventData['location'])) {
+                $event->setLocation($eventData['location']);
+            }
+
+            $timeZone = $eventData['timeZone'] ?? config('app.timezone', 'Europe/Budapest');
+
+            if (! empty($eventData['start'])) {
+                $start = new EventDateTime;
+                if (isset($eventData['start']['dateTime'])) {
+                    $start->setDateTime($this->formatDateTime($eventData['start']['dateTime']));
+                    $start->setTimeZone($eventData['start']['timeZone'] ?? $timeZone);
+                }
+                $event->setStart($start);
+            }
+
+            if (! empty($eventData['end'])) {
+                $end = new EventDateTime;
+                if (isset($eventData['end']['dateTime'])) {
+                    $end->setDateTime($this->formatDateTime($eventData['end']['dateTime']));
+                    $end->setTimeZone($eventData['end']['timeZone'] ?? $timeZone);
+                }
+                $event->setEnd($end);
+            }
+
+            $updatedEvent = $service->events->update($calendarId, $eventId, $event);
+
+            Log::info('Google Calendar event updated', [
+                'event_id' => $updatedEvent->getId(),
+                'summary' => $updatedEvent->getSummary(),
+            ]);
+
+            return $this->formatEvent($updatedEvent);
+        } catch (\Google\Service\Exception $e) {
+            if ($e->getCode() === 404) {
+                Log::warning('Google Calendar event not found for update', [
+                    'event_id' => $eventId,
+                    'calendar_id' => $calendarId,
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => 'Event not found',
+                    'errorCode' => 'EVENT_NOT_FOUND',
+                    'message' => "Az esemény ({$eventId}) nem található. Lehet, hogy egy korábbi node törölte.",
+                ];
+            }
+            throw $e;
         }
-
-        $updatedEvent = $service->events->update($calendarId, $eventId, $event);
-
-        Log::info('Google Calendar event updated', [
-            'event_id' => $updatedEvent->getId(),
-            'summary' => $updatedEvent->getSummary(),
-        ]);
-
-        return $this->formatEvent($updatedEvent);
     }
 
-    public function deleteEvent(Team $team, string $calendarId, string $eventId): bool
+    public function deleteEvent(Team $team, string $calendarId, string $eventId): array
     {
-        $service = $this->getCalendarService($team);
+        try {
+            $service = $this->getCalendarService($team);
 
-        $service->events->delete($calendarId, $eventId);
+            $service->events->delete($calendarId, $eventId);
 
-        Log::info('Google Calendar event deleted', [
-            'event_id' => $eventId,
-            'calendar_id' => $calendarId,
-        ]);
+            Log::info('Google Calendar event deleted', [
+                'event_id' => $eventId,
+                'calendar_id' => $calendarId,
+            ]);
 
-        return true;
+            return [
+                'deleted' => true,
+                'deletedEventId' => $eventId,
+            ];
+        } catch (\Google\Service\Exception $e) {
+            if ($e->getCode() === 404) {
+                Log::warning('Google Calendar event not found for delete', [
+                    'event_id' => $eventId,
+                    'calendar_id' => $calendarId,
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => 'Event not found',
+                    'errorCode' => 'EVENT_NOT_FOUND',
+                    'message' => "Az esemény ({$eventId}) nem található. Lehet, hogy már törölve lett.",
+                ];
+            }
+            throw $e;
+        }
     }
 
     public function getEvent(Team $team, string $calendarId, string $eventId): array

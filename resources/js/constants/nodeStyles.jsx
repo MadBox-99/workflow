@@ -55,8 +55,36 @@ export const getNodeTypeStyles = (isDark) => ({
         textColor: isDark ? '#f9fafb' : '#111827',
         secondaryText: isDark ? '#9ca3af' : '#6b7280',
     },
+    template: {
+        accent: '#0ea5e9',
+        bg: isDark ? '#1f2937' : '#ffffff',
+        border: isDark ? '#374151' : '#e5e7eb',
+        textColor: isDark ? '#f9fafb' : '#111827',
+        secondaryText: isDark ? '#9ca3af' : '#6b7280',
+    },
+    merge: {
+        accent: '#14b8a6',
+        bg: isDark ? '#1f2937' : '#ffffff',
+        border: isDark ? '#374151' : '#e5e7eb',
+        textColor: isDark ? '#f9fafb' : '#111827',
+        secondaryText: isDark ? '#9ca3af' : '#6b7280',
+    },
     end: {
         accent: '#ef4444',
+        bg: isDark ? '#1f2937' : '#ffffff',
+        border: isDark ? '#374151' : '#e5e7eb',
+        textColor: isDark ? '#f9fafb' : '#111827',
+        secondaryText: isDark ? '#9ca3af' : '#6b7280',
+    },
+    googleCalendarAction: {
+        accent: '#4285f4',
+        bg: isDark ? '#1f2937' : '#ffffff',
+        border: isDark ? '#374151' : '#e5e7eb',
+        textColor: isDark ? '#f9fafb' : '#111827',
+        secondaryText: isDark ? '#9ca3af' : '#6b7280',
+    },
+    googleDocsAction: {
+        accent: '#4285f4',
         bg: isDark ? '#1f2937' : '#ffffff',
         border: isDark ? '#374151' : '#e5e7eb',
         textColor: isDark ? '#f9fafb' : '#111827',
@@ -114,10 +142,38 @@ export const nodeIcons = {
             <path d="M9 9h6M9 15h6M9 12h6" />
         </svg>
     ),
+    merge: (color) => (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
+            <path d="M6 3v6l6 3 6-3V3" />
+            <path d="M12 12v9" />
+        </svg>
+    ),
+    template: (color) => (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
+            <path d="M4 6h16M4 12h16M4 18h10" />
+            <circle cx="19" cy="18" r="3" />
+        </svg>
+    ),
     end: (color) => (
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
             <path d="M9 12l2 2 4-4" />
             <circle cx="12" cy="12" r="10" />
+        </svg>
+    ),
+    googleCalendarAction: (color) => (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+    ),
+    googleDocsAction: (color) => (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
         </svg>
     ),
 };

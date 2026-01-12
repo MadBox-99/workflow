@@ -49,6 +49,14 @@ const nodeIcons = {
             <line x1="3" y1="10" x2="21" y2="10" />
         </svg>
     ),
+    googleDocsAction: (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+        </svg>
+    ),
     condition: (
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5" />
@@ -69,6 +77,18 @@ const nodeIcons = {
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M8 6l4 6 4-6" />
             <path d="M12 12v6" />
+        </svg>
+    ),
+    merge: (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M6 3v6l6 3 6-3V3" />
+            <path d="M12 12v9" />
+        </svg>
+    ),
+    template: (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 6h16M4 12h16M4 18h10" />
+            <circle cx="19" cy="18" r="3" />
         </svg>
     ),
     end: (

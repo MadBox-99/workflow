@@ -40,10 +40,15 @@ return [
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
         'scopes' => [
+            // Calendar
             'https://www.googleapis.com/auth/calendar',
             'https://www.googleapis.com/auth/calendar.events',
+            // User info
             'https://www.googleapis.com/auth/userinfo.email',
             'https://www.googleapis.com/auth/userinfo.profile',
+            // Google Docs
+            'https://www.googleapis.com/auth/documents',
+            'https://www.googleapis.com/auth/drive.readonly',
         ],
     ],
 
