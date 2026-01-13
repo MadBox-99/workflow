@@ -1,4 +1,4 @@
-import { defaultScheduleConfig } from '@/constants/scheduleDefaults';
+import { defaultScheduleConfig } from "@/constants/scheduleDefaults";
 
 export const useScheduleConfig = (config, onChange) => {
     const scheduleConfig = config.schedule || defaultScheduleConfig;

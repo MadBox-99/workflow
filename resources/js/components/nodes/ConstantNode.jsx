@@ -1,13 +1,15 @@
-import CustomNode from './CustomNode';
-import { useDarkMode } from '@/hooks/useDarkMode';
+import CustomNode from "./CustomNode";
+import { useDarkMode } from "@/hooks/useDarkMode";
 
 const ConstantNode = ({ data, selected, id }) => {
     const isDark = useDarkMode();
 
     // Display the constant value
-    const displayValue = data.config?.value !== undefined
-        ? String(data.config.value).substring(0, 30) + (String(data.config.value).length > 30 ? '...' : '')
-        : 'No value set';
+    const displayValue =
+        data.config?.value !== undefined
+            ? String(data.config.value).substring(0, 30) +
+              (String(data.config.value).length > 30 ? "..." : "")
+            : "No value set";
 
     return (
         <CustomNode
@@ -20,14 +22,14 @@ const ConstantNode = ({ data, selected, id }) => {
         >
             <div
                 style={{
-                    marginTop: '8px',
-                    padding: '8px 10px',
-                    background: isDark ? '#374151' : '#f3f4f6',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontFamily: 'ui-monospace, monospace',
-                    color: isDark ? '#e9d5ff' : '#7e22ce',
-                    wordBreak: 'break-all',
+                    marginTop: "8px",
+                    padding: "8px 10px",
+                    background: isDark ? "#374151" : "#f3f4f6",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontFamily: "ui-monospace, monospace",
+                    color: isDark ? "#e9d5ff" : "#7e22ce",
+                    wordBreak: "break-all",
                 }}
             >
                 {displayValue}

@@ -2,24 +2,15 @@
     "mcpServers": {
         "filament": {
             "command": "php",
-            "args": [
-                "artisan",
-                "mcp:start",
-                "filament"
-            ]
+            "args": ["artisan", "mcp:start", "filament"]
         },
         "laravel-boost": {
             "command": "php",
-            "args": [
-                "artisan",
-                "boost:mcp"
-            ]
+            "args": ["artisan", "boost:mcp"]
         },
         "herd": {
             "command": "php",
-            "args": [
-                "/Applications/Herd.app/Contents/Resources/herd-mcp.phar"
-            ],
+            "args": ["/Applications/Herd.app/Contents/Resources/herd-mcp.phar"],
             "env": {
                 "SITE_PATH": "/Users/szabozoltan/Herd/workflow"
             }

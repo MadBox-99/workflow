@@ -1,37 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 const EmailActionConfig = ({ config, onChange }) => {
-    const [template, setTemplate] = useState(config.template || '');
+    const [template, setTemplate] = useState(config.template || "");
     const [recipients, setRecipients] = useState(
-        config.recipients ? config.recipients.join(', ') : ''
+        config.recipients ? config.recipients.join(", ") : "",
     );
-    const [subject, setSubject] = useState(config.subject || '');
+    const [subject, setSubject] = useState(config.subject || "");
     const [customData, setCustomData] = useState(
-        config.customData ? JSON.stringify(config.customData, null, 2) : '{}'
+        config.customData ? JSON.stringify(config.customData, null, 2) : "{}",
     );
     const [templates, setTemplates] = useState([]);
     const [loadingTemplates, setLoadingTemplates] = useState(true);
-    const [selectedTemplateVariables, setSelectedTemplateVariables] = useState(null);
+    const [selectedTemplateVariables, setSelectedTemplateVariables] =
+        useState(null);
 
     // Sync local state with config prop when it changes (e.g., selecting a different node)
     useEffect(() => {
-        setTemplate(config.template || '');
-        setRecipients(config.recipients ? config.recipients.join(', ') : '');
-        setSubject(config.subject || '');
-        setCustomData(config.customData ? JSON.stringify(config.customData, null, 2) : '{}');
+        setTemplate(config.template || "");
+        setRecipients(config.recipients ? config.recipients.join(", ") : "");
+        setSubject(config.subject || "");
+        setCustomData(
+            config.customData
+                ? JSON.stringify(config.customData, null, 2)
+                : "{}",
+        );
     }, [config]);
 
     useEffect(() => {
         const fetchTemplates = async () => {
             try {
                 setLoadingTemplates(true);
-                const response = await fetch('/api/email-templates');
+                const response = await fetch("/api/email-templates");
                 if (response.ok) {
                     const data = await response.json();
                     setTemplates(data);
                 }
             } catch (error) {
-                console.error('Failed to fetch email templates:', error);
+                console.error("Failed to fetch email templates:", error);
             } finally {
                 setLoadingTemplates(false);
             }
@@ -52,7 +57,7 @@ const EmailActionConfig = ({ config, onChange }) => {
     useEffect(() => {
         try {
             const recipientsList = recipients
-                .split(',')
+                .split(",")
                 .map((email) => email.trim())
                 .filter((email) => email.length > 0);
 
@@ -82,7 +87,9 @@ const EmailActionConfig = ({ config, onChange }) => {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
                 >
                     <option value="">
-                        {loadingTemplates ? 'Loading templates...' : 'Select template...'}
+                        {loadingTemplates
+                            ? "Loading templates..."
+                            : "Select template..."}
                     </option>
                     {templates.map((t) => (
                         <option key={t.id} value={t.slug}>
@@ -93,23 +100,26 @@ const EmailActionConfig = ({ config, onChange }) => {
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Email templates are managed in Filament admin panel
                 </p>
-                {selectedTemplateVariables && Object.keys(selectedTemplateVariables).length > 0 && (
-                    <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-700">
-                        <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
-                            Template variables:
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                            {Object.keys(selectedTemplateVariables).map((varName) => (
-                                <span
-                                    key={varName}
-                                    className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded text-xs font-mono"
-                                >
-                                    {`{{${varName}}}`}
-                                </span>
-                            ))}
+                {selectedTemplateVariables &&
+                    Object.keys(selectedTemplateVariables).length > 0 && (
+                        <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-700">
+                            <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                                Template variables:
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                                {Object.keys(selectedTemplateVariables).map(
+                                    (varName) => (
+                                        <span
+                                            key={varName}
+                                            className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded text-xs font-mono"
+                                        >
+                                            {`{{${varName}}}`}
+                                        </span>
+                                    ),
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
             </div>
 
             <div>
@@ -162,16 +172,18 @@ const EmailActionConfig = ({ config, onChange }) => {
                     Email Preview:
                 </p>
                 <p className="text-sm text-pink-800 dark:text-pink-400 break-all">
-                    <strong>Template:</strong>{' '}
+                    <strong>Template:</strong>{" "}
                     {template
-                        ? templates.find((t) => t.slug === template)?.name || template
-                        : '(not selected)'}
+                        ? templates.find((t) => t.slug === template)?.name ||
+                          template
+                        : "(not selected)"}
                 </p>
                 <p className="text-sm text-pink-800 dark:text-pink-400 break-all">
-                    <strong>Subject:</strong> {subject || '(no subject)'}
+                    <strong>Subject:</strong> {subject || "(no subject)"}
                 </p>
                 <p className="text-sm text-pink-800 dark:text-pink-400 break-all">
-                    <strong>Recipients:</strong> {recipients || '(no recipients)'}
+                    <strong>Recipients:</strong>{" "}
+                    {recipients || "(no recipients)"}
                 </p>
             </div>
         </div>

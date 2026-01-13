@@ -1,7 +1,7 @@
-import CustomNode from './CustomNode';
+import CustomNode from "./CustomNode";
 
 const ActionNode = ({ data, selected, id }) => {
-    const nodeType = data.type || 'apiAction';
+    const nodeType = data.type || "apiAction";
 
     return (
         <CustomNode

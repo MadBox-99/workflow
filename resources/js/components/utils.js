@@ -3,7 +3,7 @@ import { twMerge } from "tailwind-merge";
 
 // Shadcn utility for merging Tailwind classes
 export function cn(...inputs) {
-  return twMerge(clsx(inputs));
+    return twMerge(clsx(inputs));
 }
 
 // Calculate the edge parameters to connect nodes from their centers

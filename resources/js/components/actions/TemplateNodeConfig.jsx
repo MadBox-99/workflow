@@ -1,9 +1,22 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import RichTextEditor from '../ui/RichTextEditor';
-import { getFieldsForNodeTypes } from '@/constants/nodeInputFields';
+import React, {
+    useState,
+    useEffect,
+    useRef,
+    useCallback,
+    useMemo,
+} from "react";
+import RichTextEditor from "../ui/RichTextEditor";
+import { getFieldsForNodeTypes } from "@/constants/nodeInputFields";
 
 // Modal component for full-screen editing
-const TemplateEditorModal = ({ isOpen, onClose, value, onChange, availableNodes, inputLabels }) => {
+const TemplateEditorModal = ({
+    isOpen,
+    onClose,
+    value,
+    onChange,
+    availableNodes,
+    inputLabels,
+}) => {
     const [localValue, setLocalValue] = useState(value);
 
     useEffect(() => {
@@ -22,7 +35,7 @@ const TemplateEditorModal = ({ isOpen, onClose, value, onChange, availableNodes,
         // This prevents Delete/Backspace from deleting the node while editing
         e.stopPropagation();
 
-        if (e.key === 'Escape') {
+        if (e.key === "Escape") {
             onClose();
         }
     };
@@ -31,13 +44,13 @@ const TemplateEditorModal = ({ isOpen, onClose, value, onChange, availableNodes,
 
     // Get preview text
     const getPreviewText = () => {
-        if (!localValue) return '';
+        if (!localValue) return "";
         // Convert mentions to placeholders then strip HTML
         const withPlaceholders = localValue.replace(
             /<span[^>]*data-type="mention"[^>]*data-id="(input\d+)"[^>]*>[^<]*<\/span>/g,
-            (_, id) => `\${${id}}`
+            (_, id) => `\${${id}}`,
         );
-        const plainText = withPlaceholders.replace(/<[^>]*>/g, '');
+        const plainText = withPlaceholders.replace(/<[^>]*>/g, "");
         return plainText.replace(/\$\{input(\d+)\}/g, (_, num) => {
             const label = inputLabels[parseInt(num) - 1] || `Input ${num}`;
             return `[${label}]`;
@@ -64,8 +77,18 @@ const TemplateEditorModal = ({ isOpen, onClose, value, onChange, availableNodes,
                         onClick={onClose}
                         className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                     >
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <svg
+                            className="w-6 h-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                            />
                         </svg>
                     </button>
                 </div>
@@ -74,8 +97,12 @@ const TemplateEditorModal = ({ isOpen, onClose, value, onChange, availableNodes,
                 <div className="flex-1 overflow-auto p-6 space-y-4">
                     <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-700 rounded p-3">
                         <p className="text-sm text-sky-700 dark:text-sky-400">
-                            Type <kbd className="px-1.5 py-0.5 bg-sky-100 dark:bg-sky-800 rounded text-xs font-mono">@</kbd> to insert input placeholders.
-                            Use the toolbar to format your text with bold, italic, lists, and more.
+                            Type{" "}
+                            <kbd className="px-1.5 py-0.5 bg-sky-100 dark:bg-sky-800 rounded text-xs font-mono">
+                                @
+                            </kbd>{" "}
+                            to insert input placeholders. Use the toolbar to
+                            format your text with bold, italic, lists, and more.
                         </p>
                     </div>
 
@@ -92,7 +119,11 @@ const TemplateEditorModal = ({ isOpen, onClose, value, onChange, availableNodes,
                             Preview (with example values):
                         </p>
                         <p className="text-sm text-gray-800 dark:text-gray-200">
-                            {getPreviewText() || <em className="text-gray-400">No template defined</em>}
+                            {getPreviewText() || (
+                                <em className="text-gray-400">
+                                    No template defined
+                                </em>
+                            )}
                         </p>
                     </div>
                 </div>
@@ -117,10 +148,16 @@ const TemplateEditorModal = ({ isOpen, onClose, value, onChange, availableNodes,
     );
 };
 
-const TemplateNodeConfig = ({ config, onChange, inputs = [], onInputsChange, connectedNodeTypes = [] }) => {
-    const [template, setTemplate] = useState(config.template || '');
+const TemplateNodeConfig = ({
+    config,
+    onChange,
+    inputs = [],
+    onInputsChange,
+    connectedNodeTypes = [],
+}) => {
+    const [template, setTemplate] = useState(config.template || "");
     const [inputLabels, setInputLabels] = useState(config.inputLabels || []);
-    const [targetField, setTargetField] = useState(config.targetField || '');
+    const [targetField, setTargetField] = useState(config.targetField || "");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const isInitialMount = useRef(true);
     const lastConfigRef = useRef(null);
@@ -128,14 +165,14 @@ const TemplateNodeConfig = ({ config, onChange, inputs = [], onInputsChange, con
     // Get available target fields based on connected node types
     const availableFields = useMemo(
         () => getFieldsForNodeTypes(connectedNodeTypes),
-        [connectedNodeTypes]
+        [connectedNodeTypes],
     );
     const hasRelevantConnection = availableFields.length > 0;
 
     // Normalize inputs - they can be strings like 'input-1' or objects
     const normalizeInputs = useCallback((inputArr) => {
         return (inputArr || []).map((inp, i) => {
-            if (typeof inp === 'string') {
+            if (typeof inp === "string") {
                 return inp;
             }
             return inp.id || `input-${i + 1}`;
@@ -149,14 +186,14 @@ const TemplateNodeConfig = ({ config, onChange, inputs = [], onInputsChange, con
         return normalizedInputs.map((input, i) => ({
             id: `input${i + 1}`,
             label: inputLabels[i] || `Input ${i + 1}`,
-            type: 'input',
-            color: '#0ea5e9', // sky color
+            type: "input",
+            color: "#0ea5e9", // sky color
         }));
     }, [normalizedInputs, inputLabels]);
 
     // Initialize labels on mount or when inputs length changes
     useEffect(() => {
-        setInputLabels(prev => {
+        setInputLabels((prev) => {
             const newLabels = [...prev];
             // Ensure we have enough labels
             while (newLabels.length < normalizedInputs.length) {
@@ -172,20 +209,24 @@ const TemplateNodeConfig = ({ config, onChange, inputs = [], onInputsChange, con
 
     // Sync from config only when config actually changes from outside
     useEffect(() => {
-        const configKey = JSON.stringify({ template: config.template, inputLabels: config.inputLabels, targetField: config.targetField });
+        const configKey = JSON.stringify({
+            template: config.template,
+            inputLabels: config.inputLabels,
+            targetField: config.targetField,
+        });
         if (lastConfigRef.current === configKey) {
             return;
         }
         lastConfigRef.current = configKey;
 
         if (config.template !== undefined) {
-            setTemplate(config.template || '');
+            setTemplate(config.template || "");
         }
         if (config.inputLabels && Array.isArray(config.inputLabels)) {
             setInputLabels(config.inputLabels);
         }
         if (config.targetField !== undefined) {
-            setTargetField(config.targetField || '');
+            setTargetField(config.targetField || "");
         }
     }, [config]);
 
@@ -213,20 +254,23 @@ const TemplateNodeConfig = ({ config, onChange, inputs = [], onInputsChange, con
         const newInputId = `input-${normalizedInputs.length + 1}`;
         const newInputs = [...normalizedInputs, newInputId];
         // Update labels locally to match
-        setInputLabels(prev => [...prev, `Input ${newInputs.length}`]);
+        setInputLabels((prev) => [...prev, `Input ${newInputs.length}`]);
         onInputsChange(newInputs);
     }, [normalizedInputs, onInputsChange]);
 
-    const handleRemoveInput = useCallback((index) => {
-        if (!onInputsChange) return;
-        if (normalizedInputs.length <= 2) return; // Minimum 2 inputs
-        const newInputs = normalizedInputs.filter((_, i) => i !== index);
-        setInputLabels(prev => prev.filter((_, i) => i !== index));
-        onInputsChange(newInputs);
-    }, [normalizedInputs, onInputsChange]);
+    const handleRemoveInput = useCallback(
+        (index) => {
+            if (!onInputsChange) return;
+            if (normalizedInputs.length <= 2) return; // Minimum 2 inputs
+            const newInputs = normalizedInputs.filter((_, i) => i !== index);
+            setInputLabels((prev) => prev.filter((_, i) => i !== index));
+            onInputsChange(newInputs);
+        },
+        [normalizedInputs, onInputsChange],
+    );
 
     const handleLabelChange = useCallback((index, label) => {
-        setInputLabels(prev => {
+        setInputLabels((prev) => {
             const newLabels = [...prev];
             newLabels[index] = label;
             return newLabels;
@@ -235,14 +279,14 @@ const TemplateNodeConfig = ({ config, onChange, inputs = [], onInputsChange, con
 
     // Get preview text - strip HTML and show placeholder values
     const getPreviewText = useCallback(() => {
-        if (!template) return '';
+        if (!template) return "";
         // First convert mentions to placeholders
         const withPlaceholders = template.replace(
             /<span[^>]*data-type="mention"[^>]*data-id="(input\d+)"[^>]*>[^<]*<\/span>/g,
-            (_, id) => `\${${id}}`
+            (_, id) => `\${${id}}`,
         );
         // Strip HTML tags
-        const plainText = withPlaceholders.replace(/<[^>]*>/g, '');
+        const plainText = withPlaceholders.replace(/<[^>]*>/g, "");
         // Replace placeholders with example values
         return plainText.replace(/\$\{input(\d+)\}/g, (_, num) => {
             const label = inputLabels[parseInt(num) - 1] || `Input ${num}`;
@@ -277,14 +321,21 @@ const TemplateNodeConfig = ({ config, onChange, inputs = [], onInputsChange, con
                 </div>
                 <div className="space-y-2">
                     {normalizedInputs.map((input, i) => (
-                        <div key={`${input}-${i}`} className="flex items-center gap-2">
+                        <div
+                            key={`${input}-${i}`}
+                            className="flex items-center gap-2"
+                        >
                             <div className="w-20 text-xs font-mono text-gray-500 dark:text-gray-400 bg-sky-50 dark:bg-sky-900/30 px-1.5 py-0.5 rounded truncate">
-                                @{inputLabels[i]?.substring(0, 8) || `Input ${i + 1}`}
+                                @
+                                {inputLabels[i]?.substring(0, 8) ||
+                                    `Input ${i + 1}`}
                             </div>
                             <input
                                 type="text"
-                                value={inputLabels[i] || ''}
-                                onChange={(e) => handleLabelChange(i, e.target.value)}
+                                value={inputLabels[i] || ""}
+                                onChange={(e) =>
+                                    handleLabelChange(i, e.target.value)
+                                }
                                 placeholder={`Input ${i + 1} label`}
                                 className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             />
@@ -313,8 +364,18 @@ const TemplateNodeConfig = ({ config, onChange, inputs = [], onInputsChange, con
                         onClick={() => setIsModalOpen(true)}
                         className="text-xs px-2 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 transition-colors flex items-center gap-1"
                     >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
                         </svg>
                         Edit Template
                     </button>
@@ -341,12 +402,21 @@ const TemplateNodeConfig = ({ config, onChange, inputs = [], onInputsChange, con
             {/* Target Field Selector */}
             <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Target Field {!hasRelevantConnection && <span className="text-xs text-gray-400">(connect to a node first)</span>}
+                    Target Field{" "}
+                    {!hasRelevantConnection && (
+                        <span className="text-xs text-gray-400">
+                            (connect to a node first)
+                        </span>
+                    )}
                 </label>
                 {hasRelevantConnection ? (
                     <>
                         <div className="mb-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded text-xs text-green-700 dark:text-green-400">
-                            Connected to: <strong>{availableFields.map(f => f.label).join(', ')}</strong> - select which field to populate
+                            Connected to:{" "}
+                            <strong>
+                                {availableFields.map((f) => f.label).join(", ")}
+                            </strong>{" "}
+                            - select which field to populate
                         </div>
                         <select
                             value={targetField}
@@ -355,9 +425,15 @@ const TemplateNodeConfig = ({ config, onChange, inputs = [], onInputsChange, con
                         >
                             <option value="">-- Select target field --</option>
                             {availableFields.map((nodeConfig) => (
-                                <optgroup key={nodeConfig.nodeType} label={nodeConfig.label}>
+                                <optgroup
+                                    key={nodeConfig.nodeType}
+                                    label={nodeConfig.label}
+                                >
                                     {nodeConfig.fields.map((field) => (
-                                        <option key={field.value} value={field.value}>
+                                        <option
+                                            key={field.value}
+                                            value={field.value}
+                                        >
                                             {field.label}
                                         </option>
                                     ))}
@@ -367,7 +443,8 @@ const TemplateNodeConfig = ({ config, onChange, inputs = [], onInputsChange, con
                     </>
                 ) : (
                     <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-500 dark:text-gray-400">
-                        Connect this node to an action (Calendar, Email, API, etc.) to see available target fields.
+                        Connect this node to an action (Calendar, Email, API,
+                        etc.) to see available target fields.
                     </div>
                 )}
             </div>
@@ -378,13 +455,19 @@ const TemplateNodeConfig = ({ config, onChange, inputs = [], onInputsChange, con
                     Preview (with example values):
                 </p>
                 <p className="text-sm text-sky-800 dark:text-sky-400 break-all">
-                    {getPreviewText() || <em className="text-gray-400">No template defined</em>}
+                    {getPreviewText() || (
+                        <em className="text-gray-400">No template defined</em>
+                    )}
                 </p>
             </div>
 
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-2">
                 <p className="text-xs text-blue-800 dark:text-blue-400">
-                    <strong>Tip:</strong> In the editor, type <kbd className="px-1 py-0.5 bg-blue-100 dark:bg-blue-800 rounded text-xs">@</kbd> to insert input placeholders.
+                    <strong>Tip:</strong> In the editor, type{" "}
+                    <kbd className="px-1 py-0.5 bg-blue-100 dark:bg-blue-800 rounded text-xs">
+                        @
+                    </kbd>{" "}
+                    to insert input placeholders.
                 </p>
             </div>
 

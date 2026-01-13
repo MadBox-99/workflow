@@ -1,4 +1,9 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import React, {
+    forwardRef,
+    useEffect,
+    useImperativeHandle,
+    useState,
+} from "react";
 
 const MentionList = forwardRef((props, ref) => {
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -11,7 +16,9 @@ const MentionList = forwardRef((props, ref) => {
     };
 
     const upHandler = () => {
-        setSelectedIndex((selectedIndex + props.items.length - 1) % props.items.length);
+        setSelectedIndex(
+            (selectedIndex + props.items.length - 1) % props.items.length,
+        );
     };
 
     const downHandler = () => {
@@ -26,17 +33,17 @@ const MentionList = forwardRef((props, ref) => {
 
     useImperativeHandle(ref, () => ({
         onKeyDown: ({ event }) => {
-            if (event.key === 'ArrowUp') {
+            if (event.key === "ArrowUp") {
                 upHandler();
                 return true;
             }
 
-            if (event.key === 'ArrowDown') {
+            if (event.key === "ArrowDown") {
                 downHandler();
                 return true;
             }
 
-            if (event.key === 'Enter') {
+            if (event.key === "Enter") {
                 enterHandler();
                 return true;
             }
@@ -61,13 +68,13 @@ const MentionList = forwardRef((props, ref) => {
                     onClick={() => selectItem(index)}
                     className={`w-full text-left px-3 py-2 flex items-center gap-2 text-sm transition-colors ${
                         index === selectedIndex
-                            ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300'
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            ? "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
+                            : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     }`}
                 >
                     <span
                         className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: item.color || '#8b5cf6' }}
+                        style={{ backgroundColor: item.color || "#8b5cf6" }}
                     />
                     <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{item.label}</div>
@@ -88,6 +95,6 @@ const MentionList = forwardRef((props, ref) => {
     );
 });
 
-MentionList.displayName = 'MentionList';
+MentionList.displayName = "MentionList";
 
 export default MentionList;

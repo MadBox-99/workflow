@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const DatabaseConfig = ({ config, onChange }) => {
     return (
@@ -8,7 +8,8 @@ const DatabaseConfig = ({ config, onChange }) => {
                     🚧 Database Query configuration coming soon...
                 </p>
                 <p className="text-xs text-purple-600 dark:text-purple-500 mt-1">
-                    This will allow you to execute database queries directly from the workflow.
+                    This will allow you to execute database queries directly
+                    from the workflow.
                 </p>
             </div>
         </div>

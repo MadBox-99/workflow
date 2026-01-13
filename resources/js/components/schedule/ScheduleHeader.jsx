@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const ScheduleHeader = ({ enabled, onToggle }) => {
     return (
@@ -20,7 +20,10 @@ const ScheduleHeader = ({ enabled, onToggle }) => {
                     onChange={(e) => onToggle(e.target.checked)}
                     className="w-4 h-4"
                 />
-                <label htmlFor="schedule-enabled" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label
+                    htmlFor="schedule-enabled"
+                    className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
                     Enable Automatic Scheduling
                 </label>
             </div>

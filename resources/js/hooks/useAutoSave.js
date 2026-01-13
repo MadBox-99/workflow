@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from "react";
 
 export const useAutoSave = (nodes, edges, onSave, options = {}) => {
     const {
@@ -6,7 +6,7 @@ export const useAutoSave = (nodes, edges, onSave, options = {}) => {
         enabled = true,
     } = options;
 
-    const [autoSaveStatus, setAutoSaveStatus] = useState('idle'); // 'idle' | 'pending' | 'saving' | 'saved' | 'error'
+    const [autoSaveStatus, setAutoSaveStatus] = useState("idle"); // 'idle' | 'pending' | 'saving' | 'saved' | 'error'
     const [lastSavedAt, setLastSavedAt] = useState(null);
     const timeoutRef = useRef(null);
     const lastSavedDataRef = useRef(null);
@@ -48,17 +48,17 @@ export const useAutoSave = (nodes, edges, onSave, options = {}) => {
     // Perform the save
     const performSave = useCallback(async () => {
         if (!hasChanges()) {
-            setAutoSaveStatus('idle');
+            setAutoSaveStatus("idle");
             return;
         }
 
-        setAutoSaveStatus('saving');
+        setAutoSaveStatus("saving");
 
         try {
             const workflowData = {
                 nodes: nodes.map((node) => ({
                     id: node.id,
-                    type: node.data.type || 'action',
+                    type: node.data.type || "action",
                     position: node.position,
                     data: node.data,
                 })),
@@ -76,19 +76,19 @@ export const useAutoSave = (nodes, edges, onSave, options = {}) => {
             // Update last saved data hash
             lastSavedDataRef.current = createStateHash(nodes, edges);
             setLastSavedAt(new Date());
-            setAutoSaveStatus('saved');
+            setAutoSaveStatus("saved");
 
             // Reset status after 2 seconds
             setTimeout(() => {
-                setAutoSaveStatus('idle');
+                setAutoSaveStatus("idle");
             }, 2000);
         } catch (error) {
-            console.error('Auto-save failed:', error);
-            setAutoSaveStatus('error');
+            console.error("Auto-save failed:", error);
+            setAutoSaveStatus("error");
 
             // Reset error status after 3 seconds
             setTimeout(() => {
-                setAutoSaveStatus('idle');
+                setAutoSaveStatus("idle");
             }, 3000);
         }
     }, [nodes, edges, onSave, hasChanges, createStateHash]);
@@ -113,7 +113,7 @@ export const useAutoSave = (nodes, edges, onSave, options = {}) => {
         }
 
         // Set status to pending
-        setAutoSaveStatus('pending');
+        setAutoSaveStatus("pending");
 
         // Set new timeout for debounced save
         timeoutRef.current = setTimeout(() => {
@@ -126,7 +126,15 @@ export const useAutoSave = (nodes, edges, onSave, options = {}) => {
                 clearTimeout(timeoutRef.current);
             }
         };
-    }, [nodes, edges, enabled, debounceMs, hasChanges, performSave, createStateHash]);
+    }, [
+        nodes,
+        edges,
+        enabled,
+        debounceMs,
+        hasChanges,
+        performSave,
+        createStateHash,
+    ]);
 
     // Manual save function
     const saveNow = useCallback(async () => {

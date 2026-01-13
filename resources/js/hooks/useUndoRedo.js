@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useState, useRef } from "react";
 
 const MAX_HISTORY_LENGTH = 50;
 
@@ -23,8 +23,12 @@ export const useUndoRedo = (nodes, edges, setNodes, setEdges) => {
 
         // Don't save if state hasn't changed
         if (lastSavedState.current) {
-            const nodesChanged = JSON.stringify(currentState.nodes) !== JSON.stringify(lastSavedState.current.nodes);
-            const edgesChanged = JSON.stringify(currentState.edges) !== JSON.stringify(lastSavedState.current.edges);
+            const nodesChanged =
+                JSON.stringify(currentState.nodes) !==
+                JSON.stringify(lastSavedState.current.nodes);
+            const edgesChanged =
+                JSON.stringify(currentState.edges) !==
+                JSON.stringify(lastSavedState.current.edges);
             if (!nodesChanged && !edgesChanged) {
                 return;
             }

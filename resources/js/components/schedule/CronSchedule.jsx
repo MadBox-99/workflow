@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const CronSchedule = ({ cron, onChange }) => {
     return (
@@ -15,7 +15,7 @@ const CronSchedule = ({ cron, onChange }) => {
                     <input
                         type="text"
                         value={cron.minute}
-                        onChange={(e) => onChange('minute', e.target.value)}
+                        onChange={(e) => onChange("minute", e.target.value)}
                         className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         placeholder="* or 0-59"
                     />
@@ -28,7 +28,7 @@ const CronSchedule = ({ cron, onChange }) => {
                     <input
                         type="text"
                         value={cron.hour}
-                        onChange={(e) => onChange('hour', e.target.value)}
+                        onChange={(e) => onChange("hour", e.target.value)}
                         className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         placeholder="* or 0-23"
                     />
@@ -41,7 +41,7 @@ const CronSchedule = ({ cron, onChange }) => {
                     <input
                         type="text"
                         value={cron.dayOfMonth}
-                        onChange={(e) => onChange('dayOfMonth', e.target.value)}
+                        onChange={(e) => onChange("dayOfMonth", e.target.value)}
                         className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         placeholder="* or 1-31"
                     />
@@ -54,7 +54,7 @@ const CronSchedule = ({ cron, onChange }) => {
                     <input
                         type="text"
                         value={cron.month}
-                        onChange={(e) => onChange('month', e.target.value)}
+                        onChange={(e) => onChange("month", e.target.value)}
                         className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         placeholder="* or 1-12"
                     />
@@ -67,7 +67,7 @@ const CronSchedule = ({ cron, onChange }) => {
                     <input
                         type="text"
                         value={cron.dayOfWeek}
-                        onChange={(e) => onChange('dayOfWeek', e.target.value)}
+                        onChange={(e) => onChange("dayOfWeek", e.target.value)}
                         className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         placeholder="* or 0-6"
                     />
@@ -79,19 +79,30 @@ const CronSchedule = ({ cron, onChange }) => {
                     Cron Expression:
                 </p>
                 <p className="text-sm text-purple-800 dark:text-purple-400 font-mono">
-                    {cron.minute} {cron.hour} {cron.dayOfMonth} {cron.month} {cron.dayOfWeek}
+                    {cron.minute} {cron.hour} {cron.dayOfMonth} {cron.month}{" "}
+                    {cron.dayOfWeek}
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    * = any value | Numbers = specific value | Ranges: 1-5 | Lists: 1,3,5
+                    * = any value | Numbers = specific value | Ranges: 1-5 |
+                    Lists: 1,3,5
                 </p>
             </div>
 
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded p-2">
                 <p className="text-xs text-yellow-800 dark:text-yellow-400">
-                    <strong>Examples:</strong><br/>
-                    • Every day at 9 AM: <code className="bg-white dark:bg-gray-700 px-1">0 9 * * *</code><br/>
-                    • Every Monday at 8:30 AM: <code className="bg-white dark:bg-gray-700 px-1">30 8 * * 1</code><br/>
-                    • First day of month: <code className="bg-white dark:bg-gray-700 px-1">0 0 1 * *</code>
+                    <strong>Examples:</strong>
+                    <br />• Every day at 9 AM:{" "}
+                    <code className="bg-white dark:bg-gray-700 px-1">
+                        0 9 * * *
+                    </code>
+                    <br />• Every Monday at 8:30 AM:{" "}
+                    <code className="bg-white dark:bg-gray-700 px-1">
+                        30 8 * * 1
+                    </code>
+                    <br />• First day of month:{" "}
+                    <code className="bg-white dark:bg-gray-700 px-1">
+                        0 0 1 * *
+                    </code>
                 </p>
             </div>
         </div>

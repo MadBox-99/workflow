@@ -1,13 +1,24 @@
-import React from 'react';
-import { ReactFlow, MiniMap, Controls, Background } from '@xyflow/react';
+import React from "react";
+import { ReactFlow, MiniMap, Controls, Background } from "@xyflow/react";
 
-const WorkflowViewer = ({ workflow, nodes, edges, edgeTypes, colorMode, onBack }) => {
+const WorkflowViewer = ({
+    workflow,
+    nodes,
+    edges,
+    edgeTypes,
+    colorMode,
+    onBack,
+}) => {
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{workflow.name}</h2>
-                    <p className="text-gray-600 dark:text-gray-400">{workflow.description}</p>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {workflow.name}
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-400">
+                        {workflow.description}
+                    </p>
                 </div>
                 <button
                     onClick={onBack}

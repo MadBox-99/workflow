@@ -5,34 +5,40 @@ Egy Laravel-alapú workflow támogató rendszer React Flow vizualizációval és
 ## Technológiai Stack
 
 ### Backend
+
 - **Laravel 12** - PHP framework
 - **SQLite/MySQL** - Adatbázis
 - **REST API** - Workflow CRUD műveletek
 
 ### Frontend
+
 - **React 18** - UI könyvtár
 - **React Flow** - Interaktív workflow vizualizáció
 - **Tailwind CSS** - Styling
 - **Vite** - Build tool
 
 ### Admin Panel
+
 - **Filament v4** - Laravel admin panel
 - **Livewire 3** - Reactive komponensek
 
 ## Főbb Funkciók
 
 ### Admin Felület (Filament)
+
 - Workflow-k listázása, létrehozása, szerkesztése, törlése
 - Vizuális workflow editor (React Flow)
 - Workflow aktiválás/deaktiválás
 - Workflow metaadatok kezelése
 
 ### Front-end Felület
+
 - Aktív workflow-k megtekintése
 - Csak-olvasható workflow vizualizáció
 - Node-ok és kapcsolatok megjelenítése
 
 ### Workflow Komponensek
+
 - **Start Node**: Folyamat kezdőpontja
 - **Action Node**: Művelet végrehajtása
 - **Condition Node**: Feltételvizsgálat
@@ -41,6 +47,7 @@ Egy Laravel-alapú workflow támogató rendszer React Flow vizualizációval és
 ## Telepítés
 
 ### Előfeltételek
+
 - PHP 8.2+
 - Composer
 - Node.js 18+
@@ -49,29 +56,35 @@ Egy Laravel-alapú workflow támogató rendszer React Flow vizualizációval és
 ### Lépések
 
 1. **Függőségek telepítése**
+
 ```bash
 composer install
 npm install
 ```
 
 2. **Környezeti változók beállítása**
+
 ```bash
 cp .env.example .env
 php artisan key:generate
 ```
 
 3. **Adatbázis migráció**
+
 ```bash
 php artisan migrate
 ```
 
 4. **Admin felhasználó létrehozása**
+
 ```bash
 php artisan make:filament-user
 ```
+
 Kövesd a promptokat a név, email és jelszó megadásához.
 
 5. **Frontend build**
+
 ```bash
 npm run build
 # vagy development módban:
@@ -79,6 +92,7 @@ npm run dev
 ```
 
 6. **Szerver indítása**
+
 ```bash
 php artisan serve
 ```
@@ -86,9 +100,11 @@ php artisan serve
 ## Használat
 
 ### Admin Panel
+
 A Filament admin panel elérhető: `http://localhost:8000/admin`
 
 #### Workflow létrehozása:
+
 1. Jelentkezz be az admin panelbe
 2. Navigálj a "Workflows" menüpontra
 3. Klikk a "New Workflow" gombra
@@ -98,12 +114,14 @@ A Filament admin panel elérhető: `http://localhost:8000/admin`
 7. Mentsd el a workflow-t
 
 #### Workflow szerkesztése:
+
 1. A Workflows listában klikk az "Edit" gombra
 2. Vagy klikk a "Design" gombra a vizuális editorhoz
 3. Módosítsd a workflow-t
 4. Mentsd el a változásokat
 
 ### Front-end Felület
+
 A nyilvános workflow felület elérhető: `http://localhost:8000/workflows`
 
 - Megtekintheted az összes aktív workflow-t
@@ -113,6 +131,7 @@ A nyilvános workflow felület elérhető: `http://localhost:8000/workflows`
 ## API Végpontok
 
 ### Workflows
+
 - `GET /api/workflows` - Összes workflow lekérése
 - `GET /api/workflows/{id}` - Egy workflow lekérése
 - `POST /api/workflows` - Új workflow létrehozása
@@ -120,32 +139,34 @@ A nyilvános workflow felület elérhető: `http://localhost:8000/workflows`
 - `DELETE /api/workflows/{id}` - Workflow törlése
 
 ### Példa Request Body (POST/PUT):
+
 ```json
 {
-  "name": "Új Workflow",
-  "description": "Leírás",
-  "is_active": true,
-  "nodes": [
-    {
-      "id": "node-1",
-      "type": "start",
-      "position": { "x": 100, "y": 100 },
-      "data": { "label": "Start Node" }
-    }
-  ],
-  "connections": [
-    {
-      "id": "edge-1",
-      "source": "node-1",
-      "target": "node-2"
-    }
-  ]
+    "name": "Új Workflow",
+    "description": "Leírás",
+    "is_active": true,
+    "nodes": [
+        {
+            "id": "node-1",
+            "type": "start",
+            "position": { "x": 100, "y": 100 },
+            "data": { "label": "Start Node" }
+        }
+    ],
+    "connections": [
+        {
+            "id": "edge-1",
+            "source": "node-1",
+            "target": "node-2"
+        }
+    ]
 }
 ```
 
 ## Adatbázis Struktúra
 
 ### workflows tábla
+
 - `id` - Elsődleges kulcs
 - `name` - Workflow neve
 - `description` - Leírás
@@ -154,6 +175,7 @@ A nyilvános workflow felület elérhető: `http://localhost:8000/workflows`
 - `created_at`, `updated_at` - Időbélyegek
 
 ### workflow_nodes tábla
+
 - `id` - Elsődleges kulcs
 - `workflow_id` - Foreign key
 - `node_id` - Egyedi node azonosító
@@ -164,6 +186,7 @@ A nyilvános workflow felület elérhető: `http://localhost:8000/workflows`
 - `created_at`, `updated_at` - Időbélyegek
 
 ### workflow_connections tábla
+
 - `id` - Elsődleges kulcs
 - `workflow_id` - Foreign key
 - `connection_id` - Egyedi kapcsolat azonosító
@@ -176,6 +199,7 @@ A nyilvános workflow felület elérhető: `http://localhost:8000/workflows`
 ## Fejlesztés
 
 ### Development mód
+
 ```bash
 # Terminal 1: Laravel szerver
 php artisan serve
@@ -185,6 +209,7 @@ npm run dev
 ```
 
 ### Production build
+
 ```bash
 npm run build
 php artisan optimize

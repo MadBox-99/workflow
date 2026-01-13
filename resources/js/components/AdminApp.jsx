@@ -1,8 +1,8 @@
-import React from 'react';
-import WorkflowList from './admin/WorkflowList';
-import WorkflowEditorView from './admin/WorkflowEditorView';
-import { useWorkflowAdmin } from '@/hooks/useWorkflowAdmin';
-import { useToast } from '@/components/ui/toast';
+import React from "react";
+import WorkflowList from "./admin/WorkflowList";
+import WorkflowEditorView from "./admin/WorkflowEditorView";
+import { useWorkflowAdmin } from "@/hooks/useWorkflowAdmin";
+import { useToast } from "@/components/ui/toast";
 
 const AdminApp = () => {
     const toast = useToast();
@@ -30,7 +30,12 @@ const AdminApp = () => {
         handleCloseEditor,
     } = useWorkflowAdmin(toast);
 
-    console.log('AdminApp rendering, workflows:', workflows.length, 'isCreating:', isCreating);
+    console.log(
+        "AdminApp rendering, workflows:",
+        workflows.length,
+        "isCreating:",
+        isCreating,
+    );
 
     return (
         <div className="container mx-auto p-6">

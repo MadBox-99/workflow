@@ -1,19 +1,27 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 
 const SEPARATOR_PRESETS = [
-    { value: '', label: 'No separator', description: 'Join values directly' },
-    { value: ' ', label: 'Space', description: 'Join with single space' },
-    { value: ', ', label: 'Comma + space', description: 'Join with comma and space' },
-    { value: '\n', label: 'New line', description: 'Join with line breaks' },
-    { value: ' - ', label: 'Dash', description: 'Join with dash' },
-    { value: ' | ', label: 'Pipe', description: 'Join with pipe' },
-    { value: 'custom', label: 'Custom...', description: 'Enter custom separator' },
+    { value: "", label: "No separator", description: "Join values directly" },
+    { value: " ", label: "Space", description: "Join with single space" },
+    {
+        value: ", ",
+        label: "Comma + space",
+        description: "Join with comma and space",
+    },
+    { value: "\n", label: "New line", description: "Join with line breaks" },
+    { value: " - ", label: "Dash", description: "Join with dash" },
+    { value: " | ", label: "Pipe", description: "Join with pipe" },
+    {
+        value: "custom",
+        label: "Custom...",
+        description: "Enter custom separator",
+    },
 ];
 
 const MergeNodeConfig = ({ config, onChange, inputs = [], onInputsChange }) => {
-    const [separator, setSeparator] = useState(config.separator ?? '');
-    const [separatorType, setSeparatorType] = useState('preset');
-    const [customSeparator, setCustomSeparator] = useState('');
+    const [separator, setSeparator] = useState(config.separator ?? "");
+    const [separatorType, setSeparatorType] = useState("preset");
+    const [customSeparator, setCustomSeparator] = useState("");
     const isInitialMount = useRef(true);
     const lastConfigRef = useRef(config);
 
@@ -25,14 +33,16 @@ const MergeNodeConfig = ({ config, onChange, inputs = [], onInputsChange }) => {
         }
         lastConfigRef.current = config;
 
-        const configSeparator = config.separator ?? '';
-        const isPreset = SEPARATOR_PRESETS.some(p => p.value === configSeparator && p.value !== 'custom');
+        const configSeparator = config.separator ?? "";
+        const isPreset = SEPARATOR_PRESETS.some(
+            (p) => p.value === configSeparator && p.value !== "custom",
+        );
 
         if (isPreset) {
-            setSeparatorType('preset');
+            setSeparatorType("preset");
             setSeparator(configSeparator);
         } else if (configSeparator) {
-            setSeparatorType('custom');
+            setSeparatorType("custom");
             setCustomSeparator(configSeparator);
             setSeparator(configSeparator);
         }
@@ -45,17 +55,18 @@ const MergeNodeConfig = ({ config, onChange, inputs = [], onInputsChange }) => {
             return;
         }
 
-        const finalSeparator = separatorType === 'custom' ? customSeparator : separator;
+        const finalSeparator =
+            separatorType === "custom" ? customSeparator : separator;
         onChange({ separator: finalSeparator });
     }, [separator, separatorType, customSeparator]);
 
     const handleSeparatorChange = (e) => {
         const value = e.target.value;
-        if (value === 'custom') {
-            setSeparatorType('custom');
+        if (value === "custom") {
+            setSeparatorType("custom");
             setSeparator(customSeparator);
         } else {
-            setSeparatorType('preset');
+            setSeparatorType("preset");
             setSeparator(value);
         }
     };
@@ -82,7 +93,8 @@ const MergeNodeConfig = ({ config, onChange, inputs = [], onInputsChange }) => {
 
     // Preview of merge result
     const getPreview = () => {
-        const finalSeparator = separatorType === 'custom' ? customSeparator : separator;
+        const finalSeparator =
+            separatorType === "custom" ? customSeparator : separator;
         const exampleValues = inputs.map((_, i) => `Value ${i + 1}`);
         return exampleValues.join(finalSeparator);
     };
@@ -137,7 +149,7 @@ const MergeNodeConfig = ({ config, onChange, inputs = [], onInputsChange }) => {
                     Separator
                 </label>
                 <select
-                    value={separatorType === 'custom' ? 'custom' : separator}
+                    value={separatorType === "custom" ? "custom" : separator}
                     onChange={handleSeparatorChange}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
@@ -148,14 +160,18 @@ const MergeNodeConfig = ({ config, onChange, inputs = [], onInputsChange }) => {
                     ))}
                 </select>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {SEPARATOR_PRESETS.find(p =>
-                        separatorType === 'custom' ? p.value === 'custom' : p.value === separator
-                    )?.description}
+                    {
+                        SEPARATOR_PRESETS.find((p) =>
+                            separatorType === "custom"
+                                ? p.value === "custom"
+                                : p.value === separator,
+                        )?.description
+                    }
                 </p>
             </div>
 
             {/* Custom separator input */}
-            {separatorType === 'custom' && (
+            {separatorType === "custom" && (
                 <div>
                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                         Custom Separator
@@ -182,8 +198,9 @@ const MergeNodeConfig = ({ config, onChange, inputs = [], onInputsChange }) => {
 
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-2">
                 <p className="text-xs text-blue-800 dark:text-blue-400">
-                    <strong>Tip:</strong> Connect Constant nodes or other nodes to the inputs.
-                    Values will be merged in order from left to right.
+                    <strong>Tip:</strong> Connect Constant nodes or other nodes
+                    to the inputs. Values will be merged in order from left to
+                    right.
                 </p>
             </div>
         </div>
