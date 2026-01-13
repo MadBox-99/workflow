@@ -94,29 +94,11 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
     // Find connected nodes from a source node
     const findNextNodes = useCallback(
         (nodeId, sourceHandle = null) => {
-            console.log(
-                `[findNextNodes] Looking for edges from ${nodeId}, sourceHandle filter: ${sourceHandle}`,
-            );
-            console.log(
-                `[findNextNodes] Total edges:`,
-                edges.length,
-                edges.map((e) => ({
-                    source: e.source,
-                    target: e.target,
-                    sourceHandle: e.sourceHandle,
-                })),
-            );
-
             const outgoingEdges = edges.filter((edge) => {
                 if (edge.source !== nodeId) return false;
                 if (sourceHandle && edge.sourceHandle !== sourceHandle) return false;
                 return true;
             });
-
-            console.log(
-                `[findNextNodes] Found ${outgoingEdges.length} outgoing edges:`,
-                outgoingEdges,
-            );
 
             return outgoingEdges.map((edge) => ({
                 nodeId: edge.target,
@@ -132,10 +114,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
             const incomingEdges = edges.filter((edge) => edge.target === nodeId);
             const values = {};
 
-            console.log(
-                `[getInputValues] Node ${nodeId} has ${incomingEdges.length} incoming edges`,
-            );
-
             incomingEdges.forEach((edge) => {
                 const sourceNode = nodes.find((n) => n.id === edge.source);
                 if (sourceNode) {
@@ -148,24 +126,12 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     // Check if source node has a targetField configured (for Constant nodes targeting Calendar fields)
                     const targetField = sourceNode.data.config?.targetField;
 
-                    console.log(
-                        `[getInputValues] Source node ${sourceNode.id} (${sourceNode.data.type}):`,
-                        {
-                            targetField,
-                            outputValue: sourceNode.data.outputValue,
-                            configValue: sourceNode.data.config?.value,
-                            lastResponse: sourceNode.data.lastResponse,
-                            finalValue: value,
-                        },
-                    );
-
                     // Store by node ID for multi-source selection (allows getSourceData to find specific nodes)
                     values[`__node_${sourceNode.id}`] = value;
 
                     if (targetField) {
                         // Use the targetField as the key (e.g., 'summary', 'startDateTime', 'endDateTime', etc.)
                         values[targetField] = value;
-                        console.log(`[getInputValues] Set values['${targetField}'] = ${value}`);
                     } else if (edge.targetHandle === "start-input") {
                         values.startDateTime = value;
                     } else if (edge.targetHandle === "end-input") {
@@ -175,8 +141,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     }
                 }
             });
-
-            console.log(`[getInputValues] Final values for ${nodeId}:`, values);
             return values;
         },
         [nodes, edges],
@@ -266,8 +230,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
             const config = node.data.config || {};
             const inputValues = getInputValues(node.id);
 
-            console.log(`[Runner] Executing ${nodeType}: ${node.data.label}`, inputValues);
-
             switch (nodeType) {
                 case "start":
                     return { success: true, output: config.value || true };
@@ -354,18 +316,12 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
 
                         // Format as full ISO 8601 string for Google Calendar compatibility
                         const formattedDate = result.toISOString();
-                        console.log(
-                            `[Runner] Constant datetime: ${config.datetimeOption} -> ${formattedDate}, targetField: ${config.targetField || "none"}`,
-                        );
                         return { success: true, output: formattedDate };
                     }
 
                     // Handle richtext with plaintext output format
                     if (config.valueType === "richtext" && config.outputFormat === "plaintext") {
                         const plaintext = convertHtmlToPlaintext(config.value || "");
-                        console.log(
-                            `[Runner] Constant richtext -> plaintext: ${plaintext.substring(0, 100)}...`,
-                        );
                         return { success: true, output: plaintext };
                     }
 
@@ -395,7 +351,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         // Dynamic mode - extract from input
                         if (valueAPath && inputData && typeof inputData === "object") {
                             a = getNestedValue(inputData, valueAPath);
-                            console.log(`[Condition] Extracted A from path '${valueAPath}':`, a);
                         } else {
                             a = inputData;
                         }
@@ -409,7 +364,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         // Dynamic mode - extract from input
                         if (valueBPath && inputData && typeof inputData === "object") {
                             b = getNestedValue(inputData, valueBPath);
-                            console.log(`[Condition] Extracted B from path '${valueBPath}':`, b);
                         } else {
                             b = inputData;
                         }
@@ -463,9 +417,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
 
                     const shouldContinue =
                         (passWhen === "true" && result) || (passWhen === "false" && !result);
-                    console.log(
-                        `[Condition] ${a} ${operator} ${b} = ${result}, passWhen: ${passWhen}, continue: ${shouldContinue}`,
-                    );
 
                     return {
                         success: true,
@@ -522,9 +473,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     const values = sortedKeys.map((key) => valuesBySlot[key]);
 
                     const mergedValue = values.join(separator);
-                    console.log(
-                        `[Runner] Merge node: ${values.length} inputs, separator: "${separator}", result: "${mergedValue}"`,
-                    );
 
                     return { success: true, output: mergedValue };
                 }
@@ -570,12 +518,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         return value !== undefined ? String(value) : match;
                     });
 
-                    console.log(
-                        `[Runner] Template node: values:`,
-                        valuesByIndex,
-                        `result length: ${result.length}`,
-                    );
-
                     return { success: true, output: result };
                 }
 
@@ -620,7 +562,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         // Attach _mapped to the data object so downstream nodes can access it
                         if (Object.keys(mapped).length > 0) {
                             data._mapped = mapped;
-                            console.log("[Runner] Applied responseMapping, _mapped:", mapped);
                         }
                     }
 
@@ -654,8 +595,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     if (!emailResponse.ok || !emailData.success) {
                         throw new Error(emailData.error || "Failed to send email");
                     }
-
-                    console.log("[Runner] Email sent successfully:", emailData);
                     return { success: true, output: emailData };
                 }
 
@@ -690,10 +629,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         // If input is a Calendar event object, extract the id
                         if (inputValues.input.id) {
                             eventIdFromInput = inputValues.input.id;
-                            console.log(
-                                "[Runner] Extracted eventId from connected Calendar node output:",
-                                eventIdFromInput,
-                            );
                         }
                     }
 
@@ -726,12 +661,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                                         typeof extracted === "string"
                                             ? extracted
                                             : JSON.stringify(extracted);
-                                    console.log(
-                                        "[Runner] Using dynamic summary from path",
-                                        dynamicFieldPaths.summary,
-                                        ":",
-                                        summary,
-                                    );
                                 }
                             } else {
                                 summary =
@@ -753,10 +682,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                                         typeof extracted === "string"
                                             ? extracted
                                             : JSON.stringify(extracted, null, 2);
-                                    console.log(
-                                        "[Runner] Using dynamic description from path",
-                                        dynamicFieldPaths.description,
-                                    );
                                 }
                             } else {
                                 description =
@@ -785,29 +710,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                             }
                         }
                     }
-
-                    console.log(
-                        "[Runner] Executing Google Calendar action:",
-                        config.operation,
-                        config.calendarId,
-                    );
-                    console.log(
-                        "[Runner] Dynamic fields:",
-                        JSON.stringify(dynamicFields),
-                        "Paths:",
-                        JSON.stringify(dynamicFieldPaths),
-                    );
-                    console.log("[Runner] Input values:", JSON.stringify(inputValues));
-                    console.log(
-                        "[Runner] Final values - summary:",
-                        summary,
-                        "startDateTime:",
-                        startDateTime,
-                        "endDateTime:",
-                        endDateTime,
-                        "eventId:",
-                        eventId,
-                    );
 
                     const calendarResponse = await fetch("/api/workflows/actions/google-calendar", {
                         method: "POST",
@@ -846,8 +748,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                             calendarData.error || "Failed to execute Google Calendar action",
                         );
                     }
-
-                    console.log("[Runner] Google Calendar action completed:", calendarData);
 
                     // Handle delete operation - return special marker
                     if (calendarData.deleted) {
@@ -906,10 +806,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     ) {
                         if (inputValues.input.id) {
                             documentIdFromInput = inputValues.input.id;
-                            console.log(
-                                "[Runner] Extracted documentId from connected Docs node output:",
-                                documentIdFromInput,
-                            );
                         }
                     }
 
@@ -930,7 +826,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         if (inputData !== undefined && inputData !== null) {
                             if (typeof inputData === "string") {
                                 title = inputData;
-                                console.log("[Runner] Using dynamic title from constant:", title);
                             } else if (typeof inputData === "object") {
                                 if (titlePathConfig?.path) {
                                     const extracted = getNestedValue(
@@ -942,12 +837,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                                             typeof extracted === "string"
                                                 ? extracted
                                                 : JSON.stringify(extracted);
-                                        console.log(
-                                            "[Runner] Using dynamic title from path",
-                                            titlePathConfig.path,
-                                            ":",
-                                            title,
-                                        );
                                     }
                                 } else {
                                     // Auto-detect common field names
@@ -956,10 +845,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                                         inputData.title ??
                                         inputData.name ??
                                         JSON.stringify(inputData);
-                                    console.log(
-                                        "[Runner] Using auto-detected dynamic title:",
-                                        title,
-                                    );
                                 }
                             }
                         }
@@ -976,7 +861,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         if (inputData !== undefined && inputData !== null) {
                             if (typeof inputData === "string") {
                                 content = inputData;
-                                console.log("[Runner] Using dynamic content from constant");
                             } else if (typeof inputData === "object") {
                                 if (contentPathConfig?.path) {
                                     const extracted = getNestedValue(
@@ -988,10 +872,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                                             typeof extracted === "string"
                                                 ? extracted
                                                 : JSON.stringify(extracted, null, 2);
-                                        console.log(
-                                            "[Runner] Using dynamic content from path",
-                                            contentPathConfig.path,
-                                        );
                                     }
                                 } else {
                                     // Auto-detect common field names
@@ -1001,28 +881,10 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                                         inputData.body ??
                                         inputData.text ??
                                         JSON.stringify(inputData, null, 2);
-                                    console.log("[Runner] Using auto-detected dynamic content");
                                 }
                             }
                         }
                     }
-
-                    console.log("[Runner] Executing Google Docs action:", config.operation);
-                    console.log(
-                        "[Runner] Dynamic fields:",
-                        JSON.stringify(dynamicFields),
-                        "Paths:",
-                        JSON.stringify(dynamicFieldPaths),
-                    );
-                    console.log("[Runner] Input values:", JSON.stringify(inputValues));
-                    console.log(
-                        "[Runner] Final values - title:",
-                        title,
-                        "content:",
-                        content?.substring(0, 100),
-                        "documentId:",
-                        documentId,
-                    );
 
                     const requestBodyExec = {
                         team_id: teamId,
@@ -1037,10 +899,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         insertIndex: config.insertIndex,
                         maxResults: config.maxResults,
                     };
-                    console.log(
-                        "[Runner] Sending Google Docs request (executeNode):",
-                        requestBodyExec,
-                    );
 
                     const docsResponse = await fetch("/api/workflows/actions/google-docs", {
                         method: "POST",
@@ -1068,8 +926,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                             "Failed to execute Google Docs action";
                         throw new Error(errorMsgExec);
                     }
-
-                    console.log("[Runner] Google Docs action completed:", docsData);
                     return { success: true, output: docsData.data };
                 }
 
@@ -1087,11 +943,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
         async (node, inputValues) => {
             const nodeType = node.data.type;
             const config = node.data.config || {};
-
-            console.log(
-                `[Runner] ExecuteNodeWithInputs ${nodeType}: ${node.data.label}`,
-                inputValues,
-            );
 
             switch (nodeType) {
                 case "start":
@@ -1178,18 +1029,12 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         }
 
                         const formattedDate = result.toISOString();
-                        console.log(
-                            `[Runner] Constant datetime: ${config.datetimeOption} -> ${formattedDate}, targetField: ${config.targetField || "none"}`,
-                        );
                         return { success: true, output: formattedDate };
                     }
 
                     // Handle richtext with plaintext output format
                     if (config.valueType === "richtext" && config.outputFormat === "plaintext") {
                         const plaintext = convertHtmlToPlaintext(config.value || "");
-                        console.log(
-                            `[Runner] Constant richtext -> plaintext: ${plaintext.substring(0, 100)}...`,
-                        );
                         return { success: true, output: plaintext };
                     }
 
@@ -1219,10 +1064,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         // Dynamic mode - extract from input
                         if (valueAPath && inputData && typeof inputData === "object") {
                             a = getNestedValue(inputData, valueAPath);
-                            console.log(
-                                `[Runner] Condition - Extracted A from path '${valueAPath}':`,
-                                a,
-                            );
                         } else {
                             a = inputData;
                         }
@@ -1236,10 +1077,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         // Dynamic mode - extract from input
                         if (valueBPath && inputData && typeof inputData === "object") {
                             b = getNestedValue(inputData, valueBPath);
-                            console.log(
-                                `[Runner] Condition - Extracted B from path '${valueBPath}':`,
-                                b,
-                            );
                         } else {
                             b = inputData;
                         }
@@ -1293,9 +1130,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
 
                     const shouldContinue =
                         (passWhen === "true" && result) || (passWhen === "false" && !result);
-                    console.log(
-                        `[Runner] Condition: ${a} ${operator} ${b} = ${result}, passWhen: ${passWhen}, continue: ${shouldContinue}`,
-                    );
 
                     return {
                         success: true,
@@ -1325,9 +1159,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     });
 
                     const mergedValue = values.join(separator);
-                    console.log(
-                        `[Runner] Merge (with inputs): ${values.length} inputs, separator: "${separator}", result: "${mergedValue}"`,
-                    );
 
                     return { success: true, output: mergedValue };
                 }
@@ -1353,12 +1184,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         const value = valuesByIndex[parseInt(num)];
                         return value !== undefined ? String(value) : match;
                     });
-
-                    console.log(
-                        `[Runner] Template (with inputs): template="${templateStr}", values:`,
-                        valuesByIndex,
-                        `result: "${result}"`,
-                    );
 
                     return { success: true, output: result };
                 }
@@ -1394,10 +1219,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         // If input is a Calendar event object, extract the id
                         if (inputValues.input.id) {
                             eventIdFromInput = inputValues.input.id;
-                            console.log(
-                                "[Runner] Extracted eventId from connected Calendar node output:",
-                                eventIdFromInput,
-                            );
                         }
                     }
 
@@ -1430,12 +1251,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                                         typeof extracted === "string"
                                             ? extracted
                                             : JSON.stringify(extracted);
-                                    console.log(
-                                        "[Runner] Using dynamic summary from path",
-                                        dynamicFieldPaths.summary,
-                                        ":",
-                                        summary,
-                                    );
                                 }
                             } else {
                                 summary =
@@ -1457,10 +1272,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                                         typeof extracted === "string"
                                             ? extracted
                                             : JSON.stringify(extracted, null, 2);
-                                    console.log(
-                                        "[Runner] Using dynamic description from path",
-                                        dynamicFieldPaths.description,
-                                    );
                                 }
                             } else {
                                 description =
@@ -1489,24 +1300,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                             }
                         }
                     }
-
-                    console.log(
-                        "[Runner] ExecuteNodeWithInputs Google Calendar - dynamicFields:",
-                        JSON.stringify(dynamicFields),
-                        "Paths:",
-                        JSON.stringify(dynamicFieldPaths),
-                    );
-                    console.log("[Runner] Input values:", JSON.stringify(inputValues));
-                    console.log(
-                        "[Runner] Final values - summary:",
-                        summary,
-                        "startDateTime:",
-                        startDateTime,
-                        "endDateTime:",
-                        endDateTime,
-                        "eventId:",
-                        eventId,
-                    );
 
                     const calendarResponse = await fetch("/api/workflows/actions/google-calendar", {
                         method: "POST",
@@ -1545,8 +1338,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                             calendarData.error || "Failed to execute Google Calendar action",
                         );
                     }
-
-                    console.log("[Runner] Google Calendar action completed:", calendarData);
 
                     // Handle delete operation - return special marker
                     if (calendarData.deleted) {
@@ -1605,10 +1396,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     ) {
                         if (inputValues.input.id) {
                             documentIdFromInput = inputValues.input.id;
-                            console.log(
-                                "[Runner] Extracted documentId from connected Docs node output:",
-                                documentIdFromInput,
-                            );
                         }
                     }
 
@@ -1629,7 +1416,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         if (inputData !== undefined && inputData !== null) {
                             if (typeof inputData === "string") {
                                 title = inputData;
-                                console.log("[Runner] Using dynamic title from constant:", title);
                             } else if (typeof inputData === "object") {
                                 if (titlePathConfig?.path) {
                                     const extracted = getNestedValue(
@@ -1641,12 +1427,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                                             typeof extracted === "string"
                                                 ? extracted
                                                 : JSON.stringify(extracted);
-                                        console.log(
-                                            "[Runner] Using dynamic title from path",
-                                            titlePathConfig.path,
-                                            ":",
-                                            title,
-                                        );
                                     }
                                 } else {
                                     // Auto-detect common field names
@@ -1655,10 +1435,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                                         inputData.title ??
                                         inputData.name ??
                                         JSON.stringify(inputData);
-                                    console.log(
-                                        "[Runner] Using auto-detected dynamic title:",
-                                        title,
-                                    );
                                 }
                             }
                         }
@@ -1675,7 +1451,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         if (inputData !== undefined && inputData !== null) {
                             if (typeof inputData === "string") {
                                 content = inputData;
-                                console.log("[Runner] Using dynamic content from constant");
                             } else if (typeof inputData === "object") {
                                 if (contentPathConfig?.path) {
                                     const extracted = getNestedValue(
@@ -1687,10 +1462,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                                             typeof extracted === "string"
                                                 ? extracted
                                                 : JSON.stringify(extracted, null, 2);
-                                        console.log(
-                                            "[Runner] Using dynamic content from path",
-                                            contentPathConfig.path,
-                                        );
                                     }
                                 } else {
                                     // Auto-detect common field names
@@ -1700,27 +1471,10 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                                         inputData.body ??
                                         inputData.text ??
                                         JSON.stringify(inputData, null, 2);
-                                    console.log("[Runner] Using auto-detected dynamic content");
                                 }
                             }
                         }
                     }
-
-                    console.log(
-                        "[Runner] ExecuteNodeWithInputs Google Docs - dynamicFields:",
-                        JSON.stringify(dynamicFields),
-                        "Paths:",
-                        JSON.stringify(dynamicFieldPaths),
-                    );
-                    console.log("[Runner] Input values:", JSON.stringify(inputValues));
-                    console.log(
-                        "[Runner] Final values - title:",
-                        title,
-                        "content:",
-                        content?.substring(0, 100),
-                        "documentId:",
-                        documentId,
-                    );
 
                     const requestBody = {
                         team_id: teamId,
@@ -1735,7 +1489,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         insertIndex: config.insertIndex,
                         maxResults: config.maxResults,
                     };
-                    console.log("[Runner] Sending Google Docs request:", requestBody);
 
                     const docsResponse = await fetch("/api/workflows/actions/google-docs", {
                         method: "POST",
@@ -1764,8 +1517,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                             "Failed to execute Google Docs action";
                         throw new Error(errorMessage);
                     }
-
-                    console.log("[Runner] Google Docs action completed:", docsData);
                     return { success: true, output: docsData.data };
                 }
 
@@ -1809,10 +1560,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         });
                         if (Object.keys(mapped).length > 0) {
                             data._mapped = mapped;
-                            console.log(
-                                "[Runner] Applied responseMapping (executeNodeWithInputs), _mapped:",
-                                mapped,
-                            );
                         }
                     }
 
@@ -1833,7 +1580,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
         async (node, visited, executedNodes, nodeOutputs) => {
             // Skip if already executed in this run
             if (executedNodes.has(node.id)) {
-                console.log(`[Runner] Node ${node.id} already executed, skipping`);
                 return nodeOutputs.get(node.id);
             }
 
@@ -1848,9 +1594,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     !executedNodes.has(sourceNode.id) &&
                     sourceNode.data.type !== "start"
                 ) {
-                    console.log(
-                        `[Runner] Executing input dependency ${sourceNode.id} (${sourceNode.data.type}) for ${node.id}`,
-                    );
                     await executeNodeWithDependencies(
                         sourceNode,
                         visited,
@@ -1881,13 +1624,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                                 nodeOutputs.get(sourceNode.id) ?? sourceNode.data.config?.value;
                             const targetField = sourceNode.data.config?.targetField;
 
-                            console.log(
-                                `[executeNodeWithDependencies] Source ${sourceNode.id} output:`,
-                                value,
-                                "targetField:",
-                                targetField,
-                            );
-
                             // Store by node ID for multi-source selection (allows getSourceData to find specific nodes)
                             inputValues[`__node_${sourceNode.id}`] = value;
 
@@ -1903,11 +1639,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         }
                     });
 
-                    console.log(
-                        `[executeNodeWithDependencies] Input values for ${node.id}:`,
-                        inputValues,
-                    );
-
                     // Execute with the computed input values
                     const result = await executeNodeWithInputs(node, inputValues);
 
@@ -1916,7 +1647,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
 
                     if (result.finished) {
                         updateNodeStatus(node.id, "success");
-                        console.log("[Runner] Branch completed at end node:", node.id);
                         return { finished: true };
                     }
 
@@ -2004,7 +1734,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
 
                         if (nodeResult.finished) {
                             updateNodeStatus(node.id, "success");
-                            console.log("[Runner] Branch completed at end node:", node.id);
                             continue;
                         }
 
@@ -2024,9 +1753,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     if (node.data.type === "condition") {
                         // Check shouldContinue from the execution result
                         if (nodeResult && nodeResult.shouldContinue === false) {
-                            console.log(
-                                `[Runner] Condition node ${node.id} - shouldContinue is false, stopping this branch`,
-                            );
                             continue;
                         }
                         // Use "output" handle for condition nodes that pass
@@ -2035,17 +1761,8 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
 
                     const nextNodes = findNextNodes(node.id, sourceHandle);
 
-                    console.log(
-                        `[Runner] Node ${node.id} (${node.data.type}) - sourceHandle: ${sourceHandle}, nextNodes:`,
-                        nextNodes,
-                    );
-
                     for (const { nodeId, edge } of nextNodes) {
                         const nextNode = nodes.find((n) => n.id === nodeId);
-                        console.log(
-                            `[Runner] Checking nextNode ${nodeId}:`,
-                            nextNode ? `found (visited: ${visited.has(nextNode.id)})` : "NOT FOUND",
-                        );
                         if (nextNode && !visited.has(nextNode.id)) {
                             queue.push({ node: nextNode, fromEdge: edge });
                         }

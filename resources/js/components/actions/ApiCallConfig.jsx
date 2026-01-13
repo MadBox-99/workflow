@@ -681,7 +681,7 @@ const ApiCallConfig = ({ config, onChange, nodeId, nodes = [], edges = [] }) => 
             const fetchOptions = {
                 method: method,
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json; charset=UTF-8",
                     ...parsedHeaders,
                 },
             };
@@ -690,8 +690,20 @@ const ApiCallConfig = ({ config, onChange, nodeId, nodes = [], edges = [] }) => 
                 fetchOptions.body = JSON.stringify(parsedBody);
             }
 
+            console.log("[API Test] Sending request:", {
+                url,
+                method,
+                headers: fetchOptions.headers,
+                body: parsedBody,
+            });
+
             const response = await fetch(url, fetchOptions);
             const data = await response.json();
+
+            console.log("[API Test] Response received:", {
+                status: response.status,
+                data: data,
+            });
 
             setTestResponse({
                 status: response.status,
@@ -1028,14 +1040,14 @@ const ApiCallConfig = ({ config, onChange, nodeId, nodes = [], edges = [] }) => 
                                 {availablePaths.length} fields found
                             </span>
                         </div>
-                        <details className="text-xs">
-                            <summary className="cursor-pointer text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
-                                View full response
-                            </summary>
-                            <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-900 rounded text-xs overflow-x-auto max-h-32 font-mono">
+                        <div className="text-xs">
+                            <div className="text-gray-600 dark:text-gray-400 mb-1 font-medium">
+                                Response:
+                            </div>
+                            <pre className="p-3 bg-gray-100 dark:bg-gray-900 rounded text-xs overflow-auto max-h-64 font-mono border border-gray-200 dark:border-gray-700">
                                 {JSON.stringify(testResponse.data, null, 2)}
                             </pre>
-                        </details>
+                        </div>
                     </div>
                 )}
             </div>
