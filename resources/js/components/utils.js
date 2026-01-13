@@ -28,10 +28,7 @@ export function getEdgeParams(source, target) {
 
 // Get the intersection point between a node and a line to another node
 function getNodeIntersection(intersectionNode, targetNode) {
-    const {
-        measured: intersectionNodeSize,
-        position: intersectionNodePosition,
-    } = intersectionNode;
+    const { measured: intersectionNodeSize, position: intersectionNodePosition } = intersectionNode;
     const targetPosition = targetNode.position;
 
     const w = intersectionNodeSize?.width ?? 0;

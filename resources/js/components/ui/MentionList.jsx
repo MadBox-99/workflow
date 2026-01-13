@@ -1,9 +1,4 @@
-import React, {
-    forwardRef,
-    useEffect,
-    useImperativeHandle,
-    useState,
-} from "react";
+import React, { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 
 const MentionList = forwardRef((props, ref) => {
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -16,9 +11,7 @@ const MentionList = forwardRef((props, ref) => {
     };
 
     const upHandler = () => {
-        setSelectedIndex(
-            (selectedIndex + props.items.length - 1) % props.items.length,
-        );
+        setSelectedIndex((selectedIndex + props.items.length - 1) % props.items.length);
     };
 
     const downHandler = () => {

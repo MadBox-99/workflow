@@ -34,10 +34,7 @@ const WorkflowsList = ({ workflows, loading, onViewWorkflow }) => {
                                     <span className="mr-4">
                                         Nodes: {workflow.nodes?.length || 0}
                                     </span>
-                                    <span>
-                                        Connections:{" "}
-                                        {workflow.connections?.length || 0}
-                                    </span>
+                                    <span>Connections: {workflow.connections?.length || 0}</span>
                                 </div>
                             </div>
                             <button

@@ -16,10 +16,7 @@ const StartNodeConfig = ({ config, onChange }) => {
 
     return (
         <div className="space-y-4">
-            <ScheduleHeader
-                enabled={scheduleConfig.enabled}
-                onToggle={handleScheduleToggle}
-            />
+            <ScheduleHeader enabled={scheduleConfig.enabled} onToggle={handleScheduleToggle} />
 
             {scheduleConfig.enabled && (
                 <>
@@ -36,10 +33,7 @@ const StartNodeConfig = ({ config, onChange }) => {
                     )}
 
                     {scheduleConfig.type === "cron" && (
-                        <CronSchedule
-                            cron={scheduleConfig.cron}
-                            onChange={handleCronChange}
-                        />
+                        <CronSchedule cron={scheduleConfig.cron} onChange={handleCronChange} />
                     )}
                 </>
             )}

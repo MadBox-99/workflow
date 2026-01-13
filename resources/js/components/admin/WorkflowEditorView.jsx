@@ -17,16 +17,9 @@ const getReactFlowNodeType = (dataType) => {
     ];
     if (actionTypes.includes(dataType)) return "action";
     if (
-        [
-            "start",
-            "end",
-            "condition",
-            "constant",
-            "branch",
-            "join",
-            "merge",
-            "template",
-        ].includes(dataType)
+        ["start", "end", "condition", "constant", "branch", "join", "merge", "template"].includes(
+            dataType,
+        )
     )
         return dataType;
     return "action"; // fallback for old 'custom' nodes

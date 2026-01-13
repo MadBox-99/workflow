@@ -244,11 +244,7 @@ const ConditionNode = ({ data, selected, id }) => {
                                 }}
                                 title="Run"
                             >
-                                <svg
-                                    className="w-4 h-4"
-                                    viewBox="0 0 24 24"
-                                    fill="currentColor"
-                                >
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                                     <polygon points="5 3 19 12 5 21 5 3" />
                                 </svg>
                             </button>
@@ -356,12 +352,8 @@ const ConditionNode = ({ data, selected, id }) => {
                         fontSize: "10px",
                     }}
                 >
-                    <span style={{ color: isDark ? "#60a5fa" : "#3b82f6" }}>
-                        A
-                    </span>
-                    <span style={{ color: isDark ? "#a78bfa" : "#8b5cf6" }}>
-                        B
-                    </span>
+                    <span style={{ color: isDark ? "#60a5fa" : "#3b82f6" }}>A</span>
+                    <span style={{ color: isDark ? "#a78bfa" : "#8b5cf6" }}>B</span>
                 </div>
             </div>
         </div>

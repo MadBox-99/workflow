@@ -4,14 +4,7 @@ import { getFieldsForNodeTypes } from "@/constants/nodeInputFields";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 
 // Modal Editor Component for full-screen rich text editing
-const RichTextModal = ({
-    isOpen,
-    onClose,
-    value,
-    onChange,
-    onSave,
-    availableNodes,
-}) => {
+const RichTextModal = ({ isOpen, onClose, value, onChange, onSave, availableNodes }) => {
     const [tempValue, setTempValue] = useState(value);
 
     // Sync tempValue when modal opens
@@ -46,15 +39,9 @@ const RichTextModal = ({
     if (!isOpen) return null;
 
     return createPortal(
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            data-modal-open="true"
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center" data-modal-open="true">
             {/* Backdrop */}
-            <div
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                onClick={handleCancel}
-            />
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleCancel} />
 
             {/* Modal */}
             <div className="relative w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-2xl">
@@ -167,10 +154,7 @@ const htmlToPlaintextPreview = (html) => {
     let text = html;
 
     // Process mentions
-    text = text.replace(
-        /<span[^>]*data-type="mention"[^>]*>([^<]*)<\/span>/gi,
-        "$1",
-    );
+    text = text.replace(/<span[^>]*data-type="mention"[^>]*>([^<]*)<\/span>/gi, "$1");
 
     // Headings
     text = text.replace(/<h[1-3][^>]*>(.*?)<\/h[1-3]>/gis, "\n$1\n\n");
@@ -195,10 +179,7 @@ const htmlToPlaintextPreview = (html) => {
     text = text.replace(/<br\s*\/?>/gi, "\n");
 
     // Remove formatting tags
-    text = text.replace(
-        /<(strong|b|em|i|s|strike|del|u)[^>]*>(.*?)<\/\1>/gis,
-        "$2",
-    );
+    text = text.replace(/<(strong|b|em|i|s|strike|del|u)[^>]*>(.*?)<\/\1>/gis, "$2");
 
     // Remove remaining HTML tags
     text = text.replace(/<[^>]+>/g, "");
@@ -282,10 +263,7 @@ const ConstantNodeConfig = ({
     // Build available nodes for mention in RichTextEditor (exclude current node)
     const availableNodesForMention = useMemo(() => {
         return nodes
-            .filter(
-                (node) =>
-                    node.id !== currentNodeId && node.data?.type !== "end",
-            )
+            .filter((node) => node.id !== currentNodeId && node.data?.type !== "end")
             .map((node) => ({
                 id: node.id,
                 label: node.data?.label || node.id,
@@ -303,21 +281,13 @@ const ConstantNodeConfig = ({
             }));
     }, [nodes, currentNodeId]);
     const [valueType, setValueType] = useState(config.valueType || "string");
-    const [value, setValue] = useState(
-        config.value !== undefined ? config.value : "",
-    );
-    const [datetimeOption, setDatetimeOption] = useState(
-        config.datetimeOption || "now",
-    );
+    const [value, setValue] = useState(config.value !== undefined ? config.value : "");
+    const [datetimeOption, setDatetimeOption] = useState(config.datetimeOption || "now");
     const [offsetAmount, setOffsetAmount] = useState(config.offsetAmount || 1);
     const [offsetUnit, setOffsetUnit] = useState(config.offsetUnit || "hours");
-    const [fixedDateTime, setFixedDateTime] = useState(
-        config.fixedDateTime || "",
-    );
+    const [fixedDateTime, setFixedDateTime] = useState(config.fixedDateTime || "");
     const [targetField, setTargetField] = useState(config.targetField || "");
-    const [outputFormat, setOutputFormat] = useState(
-        config.outputFormat || "html",
-    );
+    const [outputFormat, setOutputFormat] = useState(config.outputFormat || "html");
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Sync local state with config prop when it changes (e.g., selecting a different node)
@@ -386,24 +356,10 @@ const ConstantNodeConfig = ({
                 result = now;
                 break;
             case "today":
-                result = new Date(
-                    now.getFullYear(),
-                    now.getMonth(),
-                    now.getDate(),
-                    0,
-                    0,
-                    0,
-                );
+                result = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
                 break;
             case "tomorrow":
-                result = new Date(
-                    now.getFullYear(),
-                    now.getMonth(),
-                    now.getDate() + 1,
-                    0,
-                    0,
-                    0,
-                );
+                result = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
                 break;
             case "next_week":
                 result = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -421,14 +377,7 @@ const ConstantNodeConfig = ({
                 result = new Date(now.getTime() + 30 * 60 * 1000);
                 break;
             case "end_of_day":
-                result = new Date(
-                    now.getFullYear(),
-                    now.getMonth(),
-                    now.getDate(),
-                    23,
-                    59,
-                    59,
-                );
+                result = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
                 break;
             case "custom_offset": {
                 const multipliers = {
@@ -436,10 +385,7 @@ const ConstantNodeConfig = ({
                     hours: 60 * 60 * 1000,
                     days: 24 * 60 * 60 * 1000,
                 };
-                result = new Date(
-                    now.getTime() +
-                        offsetAmount * (multipliers[offsetUnit] || 0),
-                );
+                result = new Date(now.getTime() + offsetAmount * (multipliers[offsetUnit] || 0));
                 break;
             }
             case "fixed":
@@ -519,19 +465,15 @@ const ConstantNodeConfig = ({
                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                     Target Field{" "}
                     {!hasRelevantConnection && (
-                        <span className="text-xs text-gray-400">
-                            (connect to a node first)
-                        </span>
+                        <span className="text-xs text-gray-400">(connect to a node first)</span>
                     )}
                 </label>
                 {hasRelevantConnection ? (
                     <>
                         <div className="mb-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded text-xs text-green-700 dark:text-green-400">
                             Connected to:{" "}
-                            <strong>
-                                {availableFields.map((f) => f.label).join(", ")}
-                            </strong>{" "}
-                            - select which field to populate
+                            <strong>{availableFields.map((f) => f.label).join(", ")}</strong> -
+                            select which field to populate
                         </div>
                         <select
                             value={targetField}
@@ -541,15 +483,9 @@ const ConstantNodeConfig = ({
                             <option value="">-- Select target field --</option>
                             {/* Dynamically show fields for all connected node types */}
                             {availableFields.map((nodeConfig) => (
-                                <optgroup
-                                    key={nodeConfig.nodeType}
-                                    label={nodeConfig.label}
-                                >
+                                <optgroup key={nodeConfig.nodeType} label={nodeConfig.label}>
                                     {nodeConfig.fields.map((field) => (
-                                        <option
-                                            key={field.value}
-                                            value={field.value}
-                                        >
+                                        <option key={field.value} value={field.value}>
                                             {field.label}
                                         </option>
                                     ))}
@@ -559,8 +495,8 @@ const ConstantNodeConfig = ({
                     </>
                 ) : (
                     <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-500 dark:text-gray-400">
-                        Connect this node to an action (Calendar, Email, API,
-                        etc.) to see available target fields.
+                        Connect this node to an action (Calendar, Email, API, etc.) to see available
+                        target fields.
                     </div>
                 )}
             </div>
@@ -583,11 +519,7 @@ const ConstantNodeConfig = ({
                             ))}
                         </select>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {
-                                DATETIME_OPTIONS.find(
-                                    (o) => o.value === datetimeOption,
-                                )?.description
-                            }
+                            {DATETIME_OPTIONS.find((o) => o.value === datetimeOption)?.description}
                         </p>
                     </div>
 
@@ -596,11 +528,7 @@ const ConstantNodeConfig = ({
                             <input
                                 type="number"
                                 value={offsetAmount}
-                                onChange={(e) =>
-                                    setOffsetAmount(
-                                        parseInt(e.target.value) || 1,
-                                    )
-                                }
+                                onChange={(e) => setOffsetAmount(parseInt(e.target.value) || 1)}
                                 min="1"
                                 className="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             />
@@ -609,9 +537,7 @@ const ConstantNodeConfig = ({
                                 onChange={(e) => setOffsetUnit(e.target.value)}
                                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             >
-                                <option value="minutes">
-                                    Minutes from now
-                                </option>
+                                <option value="minutes">Minutes from now</option>
                                 <option value="hours">Hours from now</option>
                                 <option value="days">Days from now</option>
                             </select>
@@ -658,14 +584,10 @@ const ConstantNodeConfig = ({
                                 </label>
                                 <select
                                     value={outputFormat}
-                                    onChange={(e) =>
-                                        setOutputFormat(e.target.value)
-                                    }
+                                    onChange={(e) => setOutputFormat(e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 >
-                                    <option value="html">
-                                        HTML (preserve formatting tags)
-                                    </option>
+                                    <option value="html">HTML (preserve formatting tags)</option>
                                     <option value="plaintext">
                                         Plain Text (for Google Docs, etc.)
                                     </option>
@@ -744,10 +666,8 @@ const ConstantNodeConfig = ({
                 ) : (
                     <p className="text-sm text-purple-800 dark:text-purple-400 font-mono break-all">
                         {valueType === "string" && `"${value}"`}
-                        {valueType === "number" &&
-                            convertValue(value, "number")}
-                        {valueType === "boolean" &&
-                            String(convertValue(value, "boolean"))}
+                        {valueType === "number" && convertValue(value, "number")}
+                        {valueType === "boolean" && String(convertValue(value, "boolean"))}
                         {valueType === "datetime" && getDatetimePreview()}
                     </p>
                 )}
@@ -760,11 +680,7 @@ const ConstantNodeConfig = ({
                     )}
                     {valueType === "richtext" && (
                         <span className="ml-2 text-blue-600 dark:text-blue-400">
-                            (
-                            {outputFormat === "html"
-                                ? "HTML formatted"
-                                : "Plain text output"}
-                            )
+                            ({outputFormat === "html" ? "HTML formatted" : "Plain text output"})
                         </span>
                     )}
                 </p>
@@ -772,8 +688,8 @@ const ConstantNodeConfig = ({
 
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-2">
                 <p className="text-xs text-blue-800 dark:text-blue-400">
-                    <strong>💡 Tip:</strong> This constant value can be
-                    referenced by other nodes in your workflow.
+                    <strong>💡 Tip:</strong> This constant value can be referenced by other nodes in
+                    your workflow.
                 </p>
             </div>
         </div>

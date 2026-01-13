@@ -79,12 +79,10 @@ const CronSchedule = ({ cron, onChange }) => {
                     Cron Expression:
                 </p>
                 <p className="text-sm text-purple-800 dark:text-purple-400 font-mono">
-                    {cron.minute} {cron.hour} {cron.dayOfMonth} {cron.month}{" "}
-                    {cron.dayOfWeek}
+                    {cron.minute} {cron.hour} {cron.dayOfMonth} {cron.month} {cron.dayOfWeek}
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    * = any value | Numbers = specific value | Ranges: 1-5 |
-                    Lists: 1,3,5
+                    * = any value | Numbers = specific value | Ranges: 1-5 | Lists: 1,3,5
                 </p>
             </div>
 
@@ -92,17 +90,11 @@ const CronSchedule = ({ cron, onChange }) => {
                 <p className="text-xs text-yellow-800 dark:text-yellow-400">
                     <strong>Examples:</strong>
                     <br />• Every day at 9 AM:{" "}
-                    <code className="bg-white dark:bg-gray-700 px-1">
-                        0 9 * * *
-                    </code>
+                    <code className="bg-white dark:bg-gray-700 px-1">0 9 * * *</code>
                     <br />• Every Monday at 8:30 AM:{" "}
-                    <code className="bg-white dark:bg-gray-700 px-1">
-                        30 8 * * 1
-                    </code>
+                    <code className="bg-white dark:bg-gray-700 px-1">30 8 * * 1</code>
                     <br />• First day of month:{" "}
-                    <code className="bg-white dark:bg-gray-700 px-1">
-                        0 0 1 * *
-                    </code>
+                    <code className="bg-white dark:bg-gray-700 px-1">0 0 1 * *</code>
                 </p>
             </div>
         </div>

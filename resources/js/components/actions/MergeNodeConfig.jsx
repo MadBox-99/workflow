@@ -55,8 +55,7 @@ const MergeNodeConfig = ({ config, onChange, inputs = [], onInputsChange }) => {
             return;
         }
 
-        const finalSeparator =
-            separatorType === "custom" ? customSeparator : separator;
+        const finalSeparator = separatorType === "custom" ? customSeparator : separator;
         onChange({ separator: finalSeparator });
     }, [separator, separatorType, customSeparator]);
 
@@ -93,8 +92,7 @@ const MergeNodeConfig = ({ config, onChange, inputs = [], onInputsChange }) => {
 
     // Preview of merge result
     const getPreview = () => {
-        const finalSeparator =
-            separatorType === "custom" ? customSeparator : separator;
+        const finalSeparator = separatorType === "custom" ? customSeparator : separator;
         const exampleValues = inputs.map((_, i) => `Value ${i + 1}`);
         return exampleValues.join(finalSeparator);
     };
@@ -198,9 +196,8 @@ const MergeNodeConfig = ({ config, onChange, inputs = [], onInputsChange }) => {
 
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-2">
                 <p className="text-xs text-blue-800 dark:text-blue-400">
-                    <strong>Tip:</strong> Connect Constant nodes or other nodes
-                    to the inputs. Values will be merged in order from left to
-                    right.
+                    <strong>Tip:</strong> Connect Constant nodes or other nodes to the inputs.
+                    Values will be merged in order from left to right.
                 </p>
             </div>
         </div>

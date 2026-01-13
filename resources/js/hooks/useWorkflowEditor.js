@@ -1,10 +1,5 @@
 import { useCallback, useState, useEffect, useRef } from "react";
-import {
-    useNodesState,
-    useEdgesState,
-    addEdge,
-    useReactFlow,
-} from "@xyflow/react";
+import { useNodesState, useEdgesState, addEdge, useReactFlow } from "@xyflow/react";
 import { nodeTypeConfig } from "@/constants/workflowConstants";
 import { getLayoutedElements } from "@/utils/elkLayout";
 import axios from "axios";
@@ -23,16 +18,9 @@ const getReactFlowNodeType = (dataType) => {
     ];
     if (actionTypes.includes(dataType)) return "action";
     if (
-        [
-            "start",
-            "end",
-            "condition",
-            "constant",
-            "branch",
-            "join",
-            "merge",
-            "template",
-        ].includes(dataType)
+        ["start", "end", "condition", "constant", "branch", "join", "merge", "template"].includes(
+            dataType,
+        )
     )
         return dataType;
     return "action"; // fallback
@@ -80,9 +68,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         (nodeId) => {
             setNodes((nds) => nds.filter((node) => node.id !== nodeId));
             setEdges((eds) =>
-                eds.filter(
-                    (edge) => edge.source !== nodeId && edge.target !== nodeId,
-                ),
+                eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId),
             );
             setSelectedNode(null);
         },
@@ -175,9 +161,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                                 headers = {},
                             } = nodeData.config;
 
-                            console.log(
-                                `[Legacy API Action] Making ${method} request to ${url}`,
-                            );
+                            console.log(`[Legacy API Action] Making ${method} request to ${url}`);
 
                             const config = {
                                 method: method.toLowerCase(),
@@ -190,11 +174,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                             };
 
                             // Add data for POST, PUT, PATCH requests
-                            if (
-                                ["post", "put", "patch"].includes(
-                                    method.toLowerCase(),
-                                )
-                            ) {
+                            if (["post", "put", "patch"].includes(method.toLowerCase())) {
                                 config.data = requestBody;
                             }
 
@@ -215,10 +195,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                                     return node;
                                 }),
                             );
-                            console.log(
-                                "[Legacy API Action] Success:",
-                                response.data,
-                            );
+                            console.log("[Legacy API Action] Success:", response.data);
                         } else {
                             console.log(
                                 "[Legacy Action] Please update this node to use new action types (API Action, Email Action, etc.)",
@@ -238,9 +215,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                                 headers = {},
                             } = nodeData.config;
 
-                            console.log(
-                                `[API Action] Making ${method} request to ${url}`,
-                            );
+                            console.log(`[API Action] Making ${method} request to ${url}`);
 
                             const config = {
                                 method: method.toLowerCase(),
@@ -253,11 +228,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                             };
 
                             // Add data for POST, PUT, PATCH requests
-                            if (
-                                ["post", "put", "patch"].includes(
-                                    method.toLowerCase(),
-                                )
-                            ) {
+                            if (["post", "put", "patch"].includes(method.toLowerCase())) {
                                 config.data = requestBody;
                             }
 
@@ -293,13 +264,8 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                                 customData = {},
                             } = nodeData.config;
 
-                            console.log(
-                                `[Email Action] Sending email with template: ${template}`,
-                            );
-                            console.log(
-                                `[Email Action] Recipients:`,
-                                recipients,
-                            );
+                            console.log(`[Email Action] Sending email with template: ${template}`);
+                            console.log(`[Email Action] Recipients:`, recipients);
 
                             // TODO: Implement actual email sending via Laravel backend
                             // For now, simulate the action
@@ -331,22 +297,15 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                                     return node;
                                 }),
                             );
-                            console.log(
-                                "[Email Action] Success:",
-                                response.data,
-                            );
+                            console.log("[Email Action] Success:", response.data);
                         } else {
-                            throw new Error(
-                                "Email Action requires configuration",
-                            );
+                            throw new Error("Email Action requires configuration");
                         }
                         break;
 
                     case "databaseAction":
                         console.log("[Database Action] Not yet implemented");
-                        throw new Error(
-                            "Database action is not yet implemented",
-                        );
+                        throw new Error("Database action is not yet implemented");
 
                     case "scriptAction":
                         console.log("[Script Action] Not yet implemented");
@@ -354,22 +313,14 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
 
                     case "webhookAction":
                         console.log("[Webhook Action] Not yet implemented");
-                        throw new Error(
-                            "Webhook action is not yet implemented",
-                        );
+                        throw new Error("Webhook action is not yet implemented");
 
                     case "condition":
                         {
                             const config = nodeData.config || {};
-                            const {
-                                operator = "equals",
-                                valueA,
-                                valueB,
-                            } = config;
+                            const { operator = "equals", valueA, valueB } = config;
 
-                            console.log(
-                                `[Condition] Evaluating: ${valueA} ${operator} ${valueB}`,
-                            );
+                            console.log(`[Condition] Evaluating: ${valueA} ${operator} ${valueB}`);
 
                             let result = false;
 
@@ -405,38 +356,22 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                                     result = String(a).includes(String(b));
                                     break;
                                 case "isEmpty":
-                                    result =
-                                        a === "" ||
-                                        a === null ||
-                                        a === undefined;
+                                    result = a === "" || a === null || a === undefined;
                                     break;
                                 case "isNotEmpty":
-                                    result =
-                                        a !== "" &&
-                                        a !== null &&
-                                        a !== undefined;
+                                    result = a !== "" && a !== null && a !== undefined;
                                     break;
                                 case "isTrue":
-                                    result =
-                                        a === true ||
-                                        a === "true" ||
-                                        a === 1 ||
-                                        a === "1";
+                                    result = a === true || a === "true" || a === 1 || a === "1";
                                     break;
                                 case "isFalse":
-                                    result =
-                                        a === false ||
-                                        a === "false" ||
-                                        a === 0 ||
-                                        a === "0";
+                                    result = a === false || a === "false" || a === 0 || a === "0";
                                     break;
                                 default:
                                     result = false;
                             }
 
-                            console.log(
-                                `[Condition] Result: ${result ? "TRUE ✓" : "FALSE ✗"}`,
-                            );
+                            console.log(`[Condition] Result: ${result ? "TRUE ✓" : "FALSE ✗"}`);
 
                             setNodes((nds) =>
                                 nds.map((node) => {
@@ -464,12 +399,8 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
 
                     default:
                         // Fallback for non-action nodes (start, constant, end)
-                        console.log(
-                            `[${nodeType}] Node triggered (no action logic)`,
-                        );
-                        await new Promise((resolve) =>
-                            setTimeout(resolve, 1000),
-                        );
+                        console.log(`[${nodeType}] Node triggered (no action logic)`);
+                        await new Promise((resolve) => setTimeout(resolve, 1000));
                         setNodes((nds) =>
                             nds.map((node) => {
                                 if (node.id === nodeId) {
@@ -495,18 +426,14 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                                 data: {
                                     ...node.data,
                                     status: "error",
-                                    lastError:
-                                        error.response?.data || error.message,
+                                    lastError: error.response?.data || error.message,
                                 },
                             };
                         }
                         return node;
                     }),
                 );
-                console.error(
-                    "Failed to execute action:",
-                    error.response?.data || error.message,
-                );
+                console.error("Failed to execute action:", error.response?.data || error.message);
             }
         },
         [setNodes],
@@ -526,13 +453,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                 },
             })),
         );
-    }, [
-        handleNodeTrigger,
-        handleNodeDelete,
-        handleUpdateOutputs,
-        handleUpdateInputs,
-        setNodes,
-    ]);
+    }, [handleNodeTrigger, handleNodeDelete, handleUpdateOutputs, handleUpdateInputs, setNodes]);
 
     useEffect(() => {
         const observer = new MutationObserver(() => {
@@ -551,38 +472,22 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
     const onConnect = useCallback(
         (params) => {
             console.log("=== New Connection ===");
-            console.log(
-                "Source Node:",
-                params.source,
-                "| Handle:",
-                params.sourceHandle,
-            );
-            console.log(
-                "Target Node:",
-                params.target,
-                "| Handle:",
-                params.targetHandle,
-            );
+            console.log("Source Node:", params.source, "| Handle:", params.sourceHandle);
+            console.log("Target Node:", params.target, "| Handle:", params.targetHandle);
 
             setEdges((eds) => {
                 const oppositeConnectionIndex = eds.findIndex(
-                    (edge) =>
-                        edge.source === params.target &&
-                        edge.target === params.source,
+                    (edge) => edge.source === params.target && edge.target === params.source,
                 );
 
                 if (oppositeConnectionIndex !== -1) {
                     console.log("Reversing existing connection direction");
-                    const newEdges = eds.filter(
-                        (_, index) => index !== oppositeConnectionIndex,
-                    );
+                    const newEdges = eds.filter((_, index) => index !== oppositeConnectionIndex);
                     return addEdge(params, newEdges);
                 }
 
                 const duplicateExists = eds.some(
-                    (edge) =>
-                        edge.source === params.source &&
-                        edge.target === params.target,
+                    (edge) => edge.source === params.source && edge.target === params.target,
                 );
 
                 if (duplicateExists) {
@@ -594,8 +499,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                 // Exception: Google Calendar and Google Docs nodes can accept multiple connections to their top-target handle
                 const targetNode = nodes.find((n) => n.id === params.target);
                 const isMultiInputHandle =
-                    (targetNode?.type === "googleCalendar" ||
-                        targetNode?.type === "googleDocs") &&
+                    (targetNode?.type === "googleCalendar" || targetNode?.type === "googleDocs") &&
                     params.targetHandle === "top-target";
 
                 if (!isMultiInputHandle) {
@@ -606,9 +510,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
                     );
 
                     if (targetHandleHasInput) {
-                        console.log(
-                            "Target handle already has an incoming connection",
-                        );
+                        console.log("Target handle already has an incoming connection");
                         alert("This input already has a connection.");
                         return eds;
                     }
@@ -634,9 +536,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         (event) => {
             event.preventDefault();
 
-            const dataType = event.dataTransfer.getData(
-                "application/reactflow",
-            );
+            const dataType = event.dataTransfer.getData("application/reactflow");
             if (!dataType) return;
 
             const position = screenToFlowPosition({
@@ -793,9 +693,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         setNodes((nds) => nds.filter((node) => node.id !== selectedNode.id));
         setEdges((eds) =>
             eds.filter(
-                (edge) =>
-                    edge.source !== selectedNode.id &&
-                    edge.target !== selectedNode.id,
+                (edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id,
             ),
         );
         setSelectedNode(null);
@@ -812,9 +710,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
 
         setEdges((eds) =>
             eds.filter(
-                (edge) =>
-                    edge.source !== selectedNode.id &&
-                    edge.target !== selectedNode.id,
+                (edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id,
             ),
         );
     }, [selectedNode, setEdges]);
@@ -823,10 +719,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         const handleKeyDown = (event) => {
             if (event.key === "Delete" || event.key === "Backspace") {
                 // Don't trigger when typing in input fields
-                if (
-                    event.target.tagName === "INPUT" ||
-                    event.target.tagName === "TEXTAREA"
-                ) {
+                if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") {
                     return;
                 }
 
@@ -891,11 +784,7 @@ export const useWorkflowEditor = (initialNodes = [], initialEdges = []) => {
         if (nodes.length === 0) return;
 
         try {
-            const { nodes: layoutedNodes } = await getLayoutedElements(
-                nodes,
-                edges,
-                "DOWN",
-            );
+            const { nodes: layoutedNodes } = await getLayoutedElements(nodes, edges, "DOWN");
             setNodes(layoutedNodes);
         } catch (error) {
             console.error("Auto-layout failed:", error);

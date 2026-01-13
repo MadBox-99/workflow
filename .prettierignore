@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build output
+public/build/
+public/hot
+
+# Filament (minified)
+public/js/filament/
+public/css/filament/
+resources/css/filament/
+resources/js/filament/
+
+# Laravel generated
+storage/
+bootstrap/cache/
+
+# IDE
+.idea/
+.vscode/
+
+# Other
+*.min.js
+*.min.css
+package-lock.json
+composer.lock

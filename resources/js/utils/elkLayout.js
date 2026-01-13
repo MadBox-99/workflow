@@ -37,9 +37,7 @@ export const getLayoutedElements = async (nodes, edges, direction = "DOWN") => {
         const layoutedGraph = await elk.layout(graph);
 
         const layoutedNodes = nodes.map((node) => {
-            const layoutedNode = layoutedGraph.children?.find(
-                (n) => n.id === node.id,
-            );
+            const layoutedNode = layoutedGraph.children?.find((n) => n.id === node.id);
             if (!layoutedNode) return node;
 
             return {

@@ -45,9 +45,7 @@ function FloatingEdge({
         baseStyle.strokeDasharray = "0";
     }
 
-    return (
-        <BaseEdge id={id} path={path} markerEnd={markerEnd} style={baseStyle} />
-    );
+    return <BaseEdge id={id} path={path} markerEnd={markerEnd} style={baseStyle} />;
 }
 
 export default FloatingEdge;

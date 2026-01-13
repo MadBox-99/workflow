@@ -126,15 +126,7 @@ export const useAutoSave = (nodes, edges, onSave, options = {}) => {
                 clearTimeout(timeoutRef.current);
             }
         };
-    }, [
-        nodes,
-        edges,
-        enabled,
-        debounceMs,
-        hasChanges,
-        performSave,
-        createStateHash,
-    ]);
+    }, [nodes, edges, enabled, debounceMs, hasChanges, performSave, createStateHash]);
 
     // Manual save function
     const saveNow = useCallback(async () => {

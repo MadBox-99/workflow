@@ -30,19 +30,12 @@ const AdminApp = () => {
         handleCloseEditor,
     } = useWorkflowAdmin(toast);
 
-    console.log(
-        "AdminApp rendering, workflows:",
-        workflows.length,
-        "isCreating:",
-        isCreating,
-    );
+    console.log("AdminApp rendering, workflows:", workflows.length, "isCreating:", isCreating);
 
     return (
         <div className="container mx-auto p-6">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                    Workflow Admin
-                </h1>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Workflow Admin</h1>
                 <button
                     onClick={handleNewWorkflow}
                     className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"

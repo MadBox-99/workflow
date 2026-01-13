@@ -44,10 +44,8 @@ const DynamicField = ({
     const safeValue = value ?? "";
 
     // Parse sourcePath which can be either a string (old format) or { nodeId, path } (new format)
-    const sourceNodeId =
-        typeof sourcePath === "object" ? sourcePath?.nodeId : null;
-    const sourcePathValue =
-        typeof sourcePath === "object" ? sourcePath?.path : sourcePath;
+    const sourceNodeId = typeof sourcePath === "object" ? sourcePath?.nodeId : null;
+    const sourcePathValue = typeof sourcePath === "object" ? sourcePath?.path : sourcePath;
 
     // Check if current value matches any available input
     const selectedInput = availableInputs.find(
@@ -56,12 +54,7 @@ const DynamicField = ({
 
     // Auto-select if there's exactly one available input and no value is set
     React.useEffect(() => {
-        if (
-            isDynamic &&
-            availableInputs.length === 1 &&
-            !safeValue &&
-            !hasAutoSelected.current
-        ) {
+        if (isDynamic && availableInputs.length === 1 && !safeValue && !hasAutoSelected.current) {
             hasAutoSelected.current = true;
             onChange(`{{{input.${availableInputs[0].targetField}}}}`);
         }
@@ -75,22 +68,15 @@ const DynamicField = ({
     const hasMatchingInput = availableInputs.length > 0;
 
     // Check if there's an action output connected (API, Calendar, etc.)
-    const hasActionOutput = availableInputs.some(
-        (input) => input.isActionOutput,
-    );
+    const hasActionOutput = availableInputs.some((input) => input.isActionOutput);
 
     // Get the currently selected source node (or first action output if none selected)
     const selectedSourceNode = useMemo(() => {
         if (sourceNodeId) {
-            return availableInputs.find(
-                (input) => input.nodeId === sourceNodeId,
-            );
+            return availableInputs.find((input) => input.nodeId === sourceNodeId);
         }
         // Default to first action output if no source selected
-        return (
-            availableInputs.find((input) => input.isActionOutput) ||
-            availableInputs[0]
-        );
+        return availableInputs.find((input) => input.isActionOutput) || availableInputs[0];
     }, [sourceNodeId, availableInputs]);
 
     // Get discovered paths and response mappings from the selected source node
@@ -195,18 +181,14 @@ const DynamicField = ({
                                     <div className="flex flex-wrap gap-1.5">
                                         {availableInputs.map((input) => {
                                             const isSelected =
-                                                selectedSourceNode?.nodeId ===
-                                                input.nodeId;
-                                            const isAction =
-                                                input.isActionOutput;
+                                                selectedSourceNode?.nodeId === input.nodeId;
+                                            const isAction = input.isActionOutput;
                                             return (
                                                 <button
                                                     key={input.nodeId}
                                                     type="button"
                                                     onClick={() =>
-                                                        handleSourceNodeChange(
-                                                            input.nodeId,
-                                                        )
+                                                        handleSourceNodeChange(input.nodeId)
                                                     }
                                                     className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg border transition-all ${
                                                         isSelected
@@ -259,11 +241,7 @@ const DynamicField = ({
                                                         {input.nodeLabel}
                                                     </span>
                                                     <span className="opacity-70">
-                                                        (
-                                                        {getNodeTypeLabel(
-                                                            input.nodeType,
-                                                        )}
-                                                        )
+                                                        ({getNodeTypeLabel(input.nodeType)})
                                                     </span>
                                                 </button>
                                             );
@@ -302,10 +280,7 @@ const DynamicField = ({
                                     <span
                                         className={`text-sm ${hasActionOutput ? "text-blue-700 dark:text-blue-300" : "text-purple-700 dark:text-purple-300"}`}
                                     >
-                                        From:{" "}
-                                        <strong>
-                                            {availableInputs[0].nodeLabel}
-                                        </strong>
+                                        From: <strong>{availableInputs[0].nodeLabel}</strong>
                                     </span>
                                 </div>
                             )}
@@ -322,78 +297,63 @@ const DynamicField = ({
                                                     : "Select value:"}
                                             </p>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {selectablePaths.map(
-                                                    (pathItem, idx) => {
-                                                        const isSelected =
-                                                            sourcePathValue ===
-                                                            pathItem.path;
-                                                        return (
-                                                            <button
-                                                                key={idx}
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handlePathChange(
-                                                                        pathItem.path,
-                                                                    )
-                                                                }
-                                                                className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border transition-all hover:scale-105 ${
-                                                                    isSelected
-                                                                        ? "bg-blue-500 border-blue-600 text-white ring-2 ring-blue-300 dark:ring-blue-700"
-                                                                        : pathItem.type ===
-                                                                            "mapped"
-                                                                          ? "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:border-purple-700 dark:text-purple-400"
+                                                {selectablePaths.map((pathItem, idx) => {
+                                                    const isSelected =
+                                                        sourcePathValue === pathItem.path;
+                                                    return (
+                                                        <button
+                                                            key={idx}
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handlePathChange(pathItem.path)
+                                                            }
+                                                            className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border transition-all hover:scale-105 ${
+                                                                isSelected
+                                                                    ? "bg-blue-500 border-blue-600 text-white ring-2 ring-blue-300 dark:ring-blue-700"
+                                                                    : pathItem.type === "mapped"
+                                                                      ? "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:border-purple-700 dark:text-purple-400"
+                                                                      : pathItem.type === "constant"
+                                                                        ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/20 dark:border-orange-700 dark:text-orange-400"
+                                                                        : pathItem.type === "string"
+                                                                          ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-700 dark:text-green-400"
                                                                           : pathItem.type ===
-                                                                              "constant"
-                                                                            ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/20 dark:border-orange-700 dark:text-orange-400"
-                                                                            : pathItem.type ===
-                                                                                "string"
-                                                                              ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-700 dark:text-green-400"
-                                                                              : pathItem.type ===
-                                                                                  "number"
-                                                                                ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-400"
-                                                                                : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400"
-                                                                }`}
-                                                                title={
-                                                                    pathItem.preview
-                                                                }
-                                                            >
-                                                                {isSelected && (
-                                                                    <svg
-                                                                        className="w-3 h-3"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        viewBox="0 0 24 24"
-                                                                    >
-                                                                        <path
-                                                                            strokeLinecap="round"
-                                                                            strokeLinejoin="round"
-                                                                            strokeWidth="2"
-                                                                            d="M5 13l4 4L19 7"
-                                                                        />
-                                                                    </svg>
-                                                                )}
-                                                                <span className="font-mono">
-                                                                    {pathItem
-                                                                        .displayPath
-                                                                        .length >
-                                                                    18
-                                                                        ? "..." +
-                                                                          pathItem.displayPath.slice(
-                                                                              -16,
-                                                                          )
-                                                                        : pathItem.displayPath}
-                                                                </span>
-                                                            </button>
-                                                        );
-                                                    },
-                                                )}
+                                                                              "number"
+                                                                            ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-400"
+                                                                            : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400"
+                                                            }`}
+                                                            title={pathItem.preview}
+                                                        >
+                                                            {isSelected && (
+                                                                <svg
+                                                                    className="w-3 h-3"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth="2"
+                                                                        d="M5 13l4 4L19 7"
+                                                                    />
+                                                                </svg>
+                                                            )}
+                                                            <span className="font-mono">
+                                                                {pathItem.displayPath.length > 18
+                                                                    ? "..." +
+                                                                      pathItem.displayPath.slice(
+                                                                          -16,
+                                                                      )
+                                                                    : pathItem.displayPath}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
                                                 {/* Clear selection button */}
                                                 {sourcePathValue && (
                                                     <button
                                                         type="button"
-                                                        onClick={() =>
-                                                            handlePathChange("")
-                                                        }
+                                                        onClick={() => handlePathChange("")}
                                                         className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
                                                         title="Clear selection (auto-detect)"
                                                     >
@@ -418,19 +378,13 @@ const DynamicField = ({
                                             {selectedSourceNode.isActionOutput && (
                                                 <details className="mt-2">
                                                     <summary className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
-                                                        Or enter path
-                                                        manually...
+                                                        Or enter path manually...
                                                     </summary>
                                                     <input
                                                         type="text"
-                                                        value={
-                                                            sourcePathValue ||
-                                                            ""
-                                                        }
+                                                        value={sourcePathValue || ""}
                                                         onChange={(e) =>
-                                                            handlePathChange(
-                                                                e.target.value,
-                                                            )
+                                                            handlePathChange(e.target.value)
                                                         }
                                                         className="w-full mt-1.5 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                                         placeholder="e.g., data.items.0.name"
@@ -443,25 +397,19 @@ const DynamicField = ({
                                             <input
                                                 type="text"
                                                 value={sourcePathValue || ""}
-                                                onChange={(e) =>
-                                                    handlePathChange(
-                                                        e.target.value,
-                                                    )
-                                                }
+                                                onChange={(e) => handlePathChange(e.target.value)}
                                                 className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                                 placeholder="e.g., _mapped.title or data.name"
                                             />
                                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                Run "Test Request" on the API
-                                                node to see available fields
+                                                Run "Test Request" on the API node to see available
+                                                fields
                                             </p>
                                         </div>
                                     ) : (
                                         <div className="p-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded text-xs text-orange-700 dark:text-orange-400">
                                             Using value from constant node:{" "}
-                                            <strong>
-                                                {selectedSourceNode.nodeLabel}
-                                            </strong>
+                                            <strong>{selectedSourceNode.nodeLabel}</strong>
                                         </div>
                                     )}
                                 </div>
@@ -469,8 +417,8 @@ const DynamicField = ({
                         </>
                     ) : (
                         <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded text-xs text-yellow-700 dark:text-yellow-400">
-                            No connected input node. Connect an API, Constant,
-                            or other action node to use dynamic values.
+                            No connected input node. Connect an API, Constant, or other action node
+                            to use dynamic values.
                         </div>
                     )}
                 </div>
@@ -512,14 +460,7 @@ const TARGET_FIELD_LABELS = {
     insertIndex: "Insert Index",
 };
 
-const GoogleDocsConfig = ({
-    config,
-    onChange,
-    teamId,
-    nodeId,
-    nodes = [],
-    edges = [],
-}) => {
+const GoogleDocsConfig = ({ config, onChange, teamId, nodeId, nodes = [], edges = [] }) => {
     // Find connected nodes that can provide input (Constant nodes with targetField, or action nodes with output)
     const availableInputs = useMemo(() => {
         if (!nodeId || !edges.length || !nodes.length) return [];
@@ -545,8 +486,7 @@ const GoogleDocsConfig = ({
                         nodeLabel: sourceNode.data?.label || "Constant",
                         nodeType: "constant",
                         targetField: targetField,
-                        targetFieldLabel:
-                            TARGET_FIELD_LABELS[targetField] || targetField,
+                        targetFieldLabel: TARGET_FIELD_LABELS[targetField] || targetField,
                     });
                 }
             }
@@ -555,8 +495,7 @@ const GoogleDocsConfig = ({
             if (OUTPUT_NODE_TYPES.includes(nodeType)) {
                 inputs.push({
                     nodeId: sourceNode.id,
-                    nodeLabel:
-                        sourceNode.data?.label || getNodeTypeLabel(nodeType),
+                    nodeLabel: sourceNode.data?.label || getNodeTypeLabel(nodeType),
                     nodeType: nodeType,
                     targetField: "input", // Default field for action outputs
                     targetFieldLabel: getNodeTypeLabel(nodeType),
@@ -598,21 +537,15 @@ const GoogleDocsConfig = ({
     const [documentId, setDocumentId] = useState(config.documentId || "");
     const [title, setTitle] = useState(config.title || "");
     const [content, setContent] = useState(config.content || "");
-    const [updateOperation, setUpdateOperation] = useState(
-        config.updateOperation || "append",
-    );
+    const [updateOperation, setUpdateOperation] = useState(config.updateOperation || "append");
     const [searchText, setSearchText] = useState(config.searchText || "");
     const [insertIndex, setInsertIndex] = useState(config.insertIndex || 1);
     const [maxResults, setMaxResults] = useState(config.maxResults || 20);
 
     // Dynamic field toggles
-    const [dynamicFields, setDynamicFields] = useState(
-        config.dynamicFields || {},
-    );
+    const [dynamicFields, setDynamicFields] = useState(config.dynamicFields || {});
     // Dynamic field source paths (for specifying which field to use from API response)
-    const [dynamicFieldPaths, setDynamicFieldPaths] = useState(
-        config.dynamicFieldPaths || {},
-    );
+    const [dynamicFieldPaths, setDynamicFieldPaths] = useState(config.dynamicFieldPaths || {});
 
     const [documents, setDocuments] = useState([]);
     const [documentsLoading, setDocumentsLoading] = useState(false);
@@ -635,9 +568,7 @@ const GoogleDocsConfig = ({
         setMaxResults(config.maxResults || 20);
         setDynamicFields(config.dynamicFields || {});
         setDynamicFieldPaths(config.dynamicFieldPaths || {});
-        setDocumentIdMode(
-            config.documentIdMode || (connectedDocsNode ? "dynamic" : "list"),
-        );
+        setDocumentIdMode(config.documentIdMode || (connectedDocsNode ? "dynamic" : "list"));
     }, [config, connectedDocsNode]);
 
     // Helper to toggle dynamic state for a field
@@ -712,9 +643,7 @@ const GoogleDocsConfig = ({
     const checkConnectionStatus = async () => {
         try {
             setLoading(true);
-            const response = await fetch(
-                `/api/google/auth/status?team_id=${teamId}`,
-            );
+            const response = await fetch(`/api/google/auth/status?team_id=${teamId}`);
             if (response.ok) {
                 const data = await response.json();
                 setConnectionStatus(data);
@@ -750,19 +679,14 @@ const GoogleDocsConfig = ({
 
     // Fetch documents when operation needs them
     useEffect(() => {
-        if (
-            (operation === "read" || operation === "update") &&
-            connectionStatus?.connected
-        ) {
+        if ((operation === "read" || operation === "update") && connectionStatus?.connected) {
             fetchDocuments();
         }
     }, [operation, connectionStatus?.connected]);
 
     const handleConnect = async () => {
         try {
-            const response = await fetch(
-                `/api/google/auth/redirect?team_id=${teamId}`,
-            );
+            const response = await fetch(`/api/google/auth/redirect?team_id=${teamId}`);
             if (response.ok) {
                 const data = await response.json();
                 setConnectingUrl(data.auth_url);
@@ -809,8 +733,7 @@ const GoogleDocsConfig = ({
         return (
             <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded">
                 <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                    Please save the workflow first to enable Google Docs
-                    configuration.
+                    Please save the workflow first to enable Google Docs configuration.
                 </p>
             </div>
         );
@@ -845,8 +768,8 @@ const GoogleDocsConfig = ({
                         </div>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Connect your Google account to create, read, and update
-                        documents directly from your workflows.
+                        Connect your Google account to create, read, and update documents directly
+                        from your workflows.
                     </p>
                     <button
                         onClick={handleConnect}
@@ -1005,19 +928,16 @@ const GoogleDocsConfig = ({
                                     </svg>
                                     <div>
                                         <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                                            Using ID from:{" "}
-                                            {connectedDocsNode.nodeLabel}
+                                            Using ID from: {connectedDocsNode.nodeLabel}
                                         </p>
                                         <p className="text-xs text-purple-600 dark:text-purple-400">
-                                            Operation:{" "}
-                                            {connectedDocsNode.operation}
+                                            Operation: {connectedDocsNode.operation}
                                         </p>
                                     </div>
                                 </div>
                             ) : (
                                 <p className="text-sm text-purple-700 dark:text-purple-400">
-                                    Connect a Docs node to use its output
-                                    document ID.
+                                    Connect a Docs node to use its output document ID.
                                 </p>
                             )}
                         </div>
@@ -1029,9 +949,7 @@ const GoogleDocsConfig = ({
                             <div className="relative">
                                 <select
                                     value={documentId}
-                                    onChange={(e) =>
-                                        setDocumentId(e.target.value)
-                                    }
+                                    onChange={(e) => setDocumentId(e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                     disabled={documentsLoading}
                                 >
@@ -1044,9 +962,7 @@ const GoogleDocsConfig = ({
                                         <option key={doc.id} value={doc.id}>
                                             {doc.name || "(Untitled)"} -{" "}
                                             {doc.modifiedTime
-                                                ? new Date(
-                                                      doc.modifiedTime,
-                                                  ).toLocaleDateString(
+                                                ? new Date(doc.modifiedTime).toLocaleDateString(
                                                       "hu-HU",
                                                       {
                                                           month: "short",
@@ -1090,8 +1006,7 @@ const GoogleDocsConfig = ({
                                 placeholder="Enter document ID"
                             />
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Enter the document ID directly (from URL or
-                                another source)
+                                Enter the document ID directly (from URL or another source)
                             </p>
                         </>
                     )}
@@ -1109,8 +1024,7 @@ const GoogleDocsConfig = ({
                             <ul className="text-xs text-green-600 dark:text-green-500 space-y-0.5">
                                 {availableInputs.map((input) => (
                                     <li key={input.nodeId}>
-                                        {input.nodeLabel} &rarr;{" "}
-                                        {input.targetFieldLabel}
+                                        {input.nodeLabel} &rarr; {input.targetFieldLabel}
                                     </li>
                                 ))}
                             </ul>
@@ -1126,13 +1040,10 @@ const GoogleDocsConfig = ({
                         isDynamic={dynamicFields.title}
                         onDynamicChange={(v) => toggleDynamic("title", v)}
                         availableInputs={availableInputs.filter(
-                            (i) =>
-                                i.targetField === "title" || i.isActionOutput,
+                            (i) => i.targetField === "title" || i.isActionOutput,
                         )}
                         sourcePath={dynamicFieldPaths.title}
-                        onSourcePathChange={(path) =>
-                            updateFieldPath("title", path)
-                        }
+                        onSourcePathChange={(path) => updateFieldPath("title", path)}
                     />
 
                     <DynamicField
@@ -1144,13 +1055,10 @@ const GoogleDocsConfig = ({
                         isDynamic={dynamicFields.content}
                         onDynamicChange={(v) => toggleDynamic("content", v)}
                         availableInputs={availableInputs.filter(
-                            (i) =>
-                                i.targetField === "content" || i.isActionOutput,
+                            (i) => i.targetField === "content" || i.isActionOutput,
                         )}
                         sourcePath={dynamicFieldPaths.content}
-                        onSourcePathChange={(path) =>
-                            updateFieldPath("content", path)
-                        }
+                        onSourcePathChange={(path) => updateFieldPath("content", path)}
                     />
                 </>
             )}
@@ -1168,9 +1076,7 @@ const GoogleDocsConfig = ({
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         >
                             <option value="append">Append to End</option>
-                            <option value="prepend">
-                                Prepend to Beginning
-                            </option>
+                            <option value="prepend">Prepend to Beginning</option>
                             <option value="replace">Find and Replace</option>
                             <option value="insertAt">Insert at Index</option>
                         </select>
@@ -1184,8 +1090,7 @@ const GoogleDocsConfig = ({
                             <ul className="text-xs text-green-600 dark:text-green-500 space-y-0.5">
                                 {availableInputs.map((input) => (
                                     <li key={input.nodeId}>
-                                        {input.nodeLabel} &rarr;{" "}
-                                        {input.targetFieldLabel}
+                                        {input.nodeLabel} &rarr; {input.targetFieldLabel}
                                     </li>
                                 ))}
                             </ul>
@@ -1201,13 +1106,10 @@ const GoogleDocsConfig = ({
                         isDynamic={dynamicFields.content}
                         onDynamicChange={(v) => toggleDynamic("content", v)}
                         availableInputs={availableInputs.filter(
-                            (i) =>
-                                i.targetField === "content" || i.isActionOutput,
+                            (i) => i.targetField === "content" || i.isActionOutput,
                         )}
                         sourcePath={dynamicFieldPaths.content}
-                        onSourcePathChange={(path) =>
-                            updateFieldPath("content", path)
-                        }
+                        onSourcePathChange={(path) => updateFieldPath("content", path)}
                     />
 
                     {updateOperation === "replace" && (
@@ -1218,18 +1120,12 @@ const GoogleDocsConfig = ({
                             type="text"
                             placeholder="Text to find and replace"
                             isDynamic={dynamicFields.searchText}
-                            onDynamicChange={(v) =>
-                                toggleDynamic("searchText", v)
-                            }
+                            onDynamicChange={(v) => toggleDynamic("searchText", v)}
                             availableInputs={availableInputs.filter(
-                                (i) =>
-                                    i.targetField === "searchText" ||
-                                    i.isActionOutput,
+                                (i) => i.targetField === "searchText" || i.isActionOutput,
                             )}
                             sourcePath={dynamicFieldPaths.searchText}
-                            onSourcePathChange={(path) =>
-                                updateFieldPath("searchText", path)
-                            }
+                            onSourcePathChange={(path) => updateFieldPath("searchText", path)}
                         />
                     )}
 
@@ -1247,8 +1143,7 @@ const GoogleDocsConfig = ({
                                 placeholder="1"
                             />
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Character index where to insert content (1 =
-                                beginning)
+                                Character index where to insert content (1 = beginning)
                             </p>
                         </div>
                     )}
@@ -1286,13 +1181,11 @@ const GoogleDocsConfig = ({
                             <strong>Title:</strong> {title}
                         </p>
                     )}
-                    {(operation === "read" || operation === "update") &&
-                        documentId && (
-                            <p>
-                                <strong>Document ID:</strong>{" "}
-                                {documentId.substring(0, 20)}...
-                            </p>
-                        )}
+                    {(operation === "read" || operation === "update") && documentId && (
+                        <p>
+                            <strong>Document ID:</strong> {documentId.substring(0, 20)}...
+                        </p>
+                    )}
                     {operation === "update" && (
                         <p>
                             <strong>Update Type:</strong> {updateOperation}
@@ -1308,9 +1201,8 @@ const GoogleDocsConfig = ({
 
             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700">
                 <p className="text-xs text-blue-600 dark:text-blue-400">
-                    <strong>Tip:</strong> Connect Constant nodes and set their
-                    Target Field, then switch fields to Dynamic mode to use
-                    their values.
+                    <strong>Tip:</strong> Connect Constant nodes and set their Target Field, then
+                    switch fields to Dynamic mode to use their values.
                 </p>
             </div>
         </div>

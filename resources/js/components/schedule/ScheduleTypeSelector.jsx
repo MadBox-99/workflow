@@ -15,9 +15,7 @@ const ScheduleTypeSelector = ({ selectedType, onTypeChange }) => {
                         checked={selectedType === "interval"}
                         onChange={(e) => onTypeChange(e.target.value)}
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                        Fixed Interval
-                    </span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Fixed Interval</span>
                 </label>
                 <label className="flex items-center gap-2">
                     <input

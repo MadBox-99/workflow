@@ -40,12 +40,7 @@ const DynamicField = ({
     const safeValue = value ?? "";
 
     React.useEffect(() => {
-        if (
-            isDynamic &&
-            availableInputs.length === 1 &&
-            !safeValue &&
-            !hasAutoSelected.current
-        ) {
+        if (isDynamic && availableInputs.length === 1 && !safeValue && !hasAutoSelected.current) {
             hasAutoSelected.current = true;
             onChange(`{{{input.${availableInputs[0].targetField}}}}`);
         }
@@ -57,9 +52,7 @@ const DynamicField = ({
     const hasMatchingInput = availableInputs.length > 0;
 
     // Check if there's an action output connected (API, Calendar, etc.)
-    const hasActionOutput = availableInputs.some(
-        (input) => input.isActionOutput,
-    );
+    const hasActionOutput = availableInputs.some((input) => input.isActionOutput);
 
     return (
         <div className="space-y-1">
@@ -123,20 +116,18 @@ const DynamicField = ({
                             <span
                                 className={`text-sm ${hasActionOutput ? "text-blue-700 dark:text-blue-300" : "text-purple-700 dark:text-purple-300"}`}
                             >
-                                Using:{" "}
-                                <strong>{availableInputs[0].nodeLabel}</strong>
+                                Using: <strong>{availableInputs[0].nodeLabel}</strong>
                                 {availableInputs[0].isActionOutput && (
                                     <span className="text-xs ml-1 opacity-75">
-                                        (use {"{{{input}}}"} or{" "}
-                                        {"{{{input.fieldName}}}"})
+                                        (use {"{{{input}}}"} or {"{{{input.fieldName}}}"})
                                     </span>
                                 )}
                             </span>
                         </div>
                     ) : (
                         <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded text-xs text-yellow-700 dark:text-yellow-400">
-                            No connected input node. Connect an API, Constant,
-                            or other action node to use dynamic values.
+                            No connected input node. Connect an API, Constant, or other action node
+                            to use dynamic values.
                         </div>
                     )}
                 </div>
@@ -176,11 +167,7 @@ const extractPaths = (obj, prefix = "", maxDepth = 5) => {
                     type: "array",
                     preview: `Array[${obj.length}]`,
                 });
-                const itemPaths = extractPaths(
-                    obj[0],
-                    `${prefix}.0`,
-                    maxDepth - 1,
-                );
+                const itemPaths = extractPaths(obj[0], `${prefix}.0`, maxDepth - 1);
                 paths.push(...itemPaths);
             }
         } else {
@@ -202,11 +189,7 @@ const extractPaths = (obj, prefix = "", maxDepth = 5) => {
                             preview: `Array[${value.length}]`,
                         });
                         if (value.length > 0) {
-                            const itemPaths = extractPaths(
-                                value[0],
-                                `${fullPath}.0`,
-                                maxDepth - 1,
-                            );
+                            const itemPaths = extractPaths(value[0], `${fullPath}.0`, maxDepth - 1);
                             paths.push(...itemPaths);
                         }
                     } else {
@@ -215,11 +198,7 @@ const extractPaths = (obj, prefix = "", maxDepth = 5) => {
                             type: "object",
                             preview: "{...}",
                         });
-                        const nestedPaths = extractPaths(
-                            value,
-                            fullPath,
-                            maxDepth - 1,
-                        );
+                        const nestedPaths = extractPaths(value, fullPath, maxDepth - 1);
                         paths.push(...nestedPaths);
                     }
                 } else {
@@ -246,13 +225,7 @@ const TARGET_FIELD_LABELS = {
     authToken: "Auth Token",
 };
 
-const ApiCallConfig = ({
-    config,
-    onChange,
-    nodeId,
-    nodes = [],
-    edges = [],
-}) => {
+const ApiCallConfig = ({ config, onChange, nodeId, nodes = [], edges = [] }) => {
     // Find connected nodes that can provide input (Constant nodes with targetField, or action nodes with output)
     const availableInputs = useMemo(() => {
         if (!nodeId || !edges.length || !nodes.length) return [];
@@ -277,8 +250,7 @@ const ApiCallConfig = ({
                         nodeLabel: sourceNode.data?.label || "Constant",
                         nodeType: "constant",
                         targetField: targetField,
-                        targetFieldLabel:
-                            TARGET_FIELD_LABELS[targetField] || targetField,
+                        targetFieldLabel: TARGET_FIELD_LABELS[targetField] || targetField,
                     });
                 }
             }
@@ -287,8 +259,7 @@ const ApiCallConfig = ({
             if (OUTPUT_NODE_TYPES.includes(nodeType)) {
                 inputs.push({
                     nodeId: sourceNode.id,
-                    nodeLabel:
-                        sourceNode.data?.label || getNodeTypeLabel(nodeType),
+                    nodeLabel: sourceNode.data?.label || getNodeTypeLabel(nodeType),
                     nodeType: nodeType,
                     targetField: "input", // Default field for action outputs
                     targetFieldLabel: getNodeTypeLabel(nodeType),
@@ -309,21 +280,15 @@ const ApiCallConfig = ({
         config.headers ? JSON.stringify(config.headers, null, 2) : "{}",
     );
     const [authToken, setAuthToken] = useState(config.authToken || "");
-    const [dynamicFields, setDynamicFields] = useState(
-        config.dynamicFields || {},
-    );
-    const [responseMapping, setResponseMapping] = useState(
-        config.responseMapping || [],
-    );
+    const [dynamicFields, setDynamicFields] = useState(config.dynamicFields || {});
+    const [responseMapping, setResponseMapping] = useState(config.responseMapping || []);
     const [outputField, setOutputField] = useState(config.outputField || "");
 
     // Test request state
     const [testLoading, setTestLoading] = useState(false);
     const [testResponse, setTestResponse] = useState(null);
     const [testError, setTestError] = useState(null);
-    const [availablePaths, setAvailablePaths] = useState(
-        config.discoveredPaths || [],
-    );
+    const [availablePaths, setAvailablePaths] = useState(config.discoveredPaths || []);
     const [showPathDropdown, setShowPathDropdown] = useState(null); // 'output' | index for mapping
 
     const toggleDynamic = (fieldName, isDynamic) => {
@@ -336,9 +301,7 @@ const ApiCallConfig = ({
 
     const updateResponseMapping = (index, field, value) => {
         setResponseMapping((prev) =>
-            prev.map((item, i) =>
-                i === index ? { ...item, [field]: value } : item,
-            ),
+            prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
         );
     };
 
@@ -413,14 +376,8 @@ const ApiCallConfig = ({
     useEffect(() => {
         setMethod(config.method || "POST");
         setUrl(config.url || "");
-        setRequestBody(
-            config.requestBody
-                ? JSON.stringify(config.requestBody, null, 2)
-                : "{}",
-        );
-        setHeaders(
-            config.headers ? JSON.stringify(config.headers, null, 2) : "{}",
-        );
+        setRequestBody(config.requestBody ? JSON.stringify(config.requestBody, null, 2) : "{}");
+        setHeaders(config.headers ? JSON.stringify(config.headers, null, 2) : "{}");
         setAuthToken(config.authToken || "");
         setDynamicFields(config.dynamicFields || {});
         setResponseMapping(config.responseMapping || []);
@@ -478,9 +435,7 @@ const ApiCallConfig = ({
                             setShowPathDropdown(null);
                         }}
                         className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex justify-between items-center ${
-                            currentValue === item.path
-                                ? "bg-blue-50 dark:bg-blue-900/30"
-                                : ""
+                            currentValue === item.path ? "bg-blue-50 dark:bg-blue-900/30" : ""
                         }`}
                     >
                         <span className="font-mono text-gray-800 dark:text-gray-200">
@@ -574,9 +529,7 @@ const ApiCallConfig = ({
                         isDynamic={dynamicFields.requestBody}
                         onDynamicChange={(v) => toggleDynamic("requestBody", v)}
                         availableInputs={availableInputs.filter(
-                            (i) =>
-                                i.targetField === "requestBody" ||
-                                i.isActionOutput,
+                            (i) => i.targetField === "requestBody" || i.isActionOutput,
                         )}
                     />
                     {!dynamicFields.requestBody && (
@@ -691,8 +644,8 @@ const ApiCallConfig = ({
                 </div>
 
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    Send a test request to see the response structure and easily
-                    select which fields to extract.
+                    Send a test request to see the response structure and easily select which fields
+                    to extract.
                 </p>
 
                 {testError && (
@@ -708,8 +661,7 @@ const ApiCallConfig = ({
                         <div className="flex items-center gap-2">
                             <span
                                 className={`px-2 py-0.5 text-xs font-medium rounded ${
-                                    testResponse.status >= 200 &&
-                                    testResponse.status < 300
+                                    testResponse.status >= 200 && testResponse.status < 300
                                         ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                                         : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                                 }`}
@@ -739,8 +691,8 @@ const ApiCallConfig = ({
                         Extract Single Field
                     </label>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                        Select a specific field to pass to the next node. Leave
-                        empty to pass the entire response.
+                        Select a specific field to pass to the next node. Leave empty to pass the
+                        entire response.
                     </p>
                     <div className="relative">
                         <div className="flex gap-2">
@@ -749,8 +701,7 @@ const ApiCallConfig = ({
                                 value={outputField}
                                 onChange={(e) => setOutputField(e.target.value)}
                                 onFocus={() =>
-                                    availablePaths.length > 0 &&
-                                    setShowPathDropdown("output")
+                                    availablePaths.length > 0 && setShowPathDropdown("output")
                                 }
                                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 placeholder="e.g., data.user.id"
@@ -760,9 +711,7 @@ const ApiCallConfig = ({
                                     type="button"
                                     onClick={() =>
                                         setShowPathDropdown(
-                                            showPathDropdown === "output"
-                                                ? null
-                                                : "output",
+                                            showPathDropdown === "output" ? null : "output",
                                         )
                                     }
                                     className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600"
@@ -796,8 +745,8 @@ const ApiCallConfig = ({
                                 Field Mappings
                             </label>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Extract multiple fields with custom names for
-                                easy access in subsequent nodes.
+                                Extract multiple fields with custom names for easy access in
+                                subsequent nodes.
                             </p>
                         </div>
                         <button
@@ -830,25 +779,13 @@ const ApiCallConfig = ({
                             </p>
                             <div className="flex flex-wrap gap-1.5">
                                 {availablePaths
-                                    .filter((p) =>
-                                        [
-                                            "string",
-                                            "number",
-                                            "boolean",
-                                        ].includes(p.type),
-                                    )
-                                    .filter(
-                                        (p) =>
-                                            !responseMapping.some(
-                                                (m) => m.path === p.path,
-                                            ),
-                                    )
+                                    .filter((p) => ["string", "number", "boolean"].includes(p.type))
+                                    .filter((p) => !responseMapping.some((m) => m.path === p.path))
                                     .slice(0, 12)
                                     .map((path, idx) => {
                                         // Generate alias from path (last part, camelCase)
                                         const pathParts = path.path.split(".");
-                                        const lastPart =
-                                            pathParts[pathParts.length - 1];
+                                        const lastPart = pathParts[pathParts.length - 1];
                                         const suggestedAlias = lastPart.replace(
                                             /[^a-zA-Z0-9]/g,
                                             "",
@@ -859,15 +796,13 @@ const ApiCallConfig = ({
                                                 key={idx}
                                                 type="button"
                                                 onClick={() => {
-                                                    setResponseMapping(
-                                                        (prev) => [
-                                                            ...prev,
-                                                            {
-                                                                path: path.path,
-                                                                alias: suggestedAlias,
-                                                            },
-                                                        ],
-                                                    );
+                                                    setResponseMapping((prev) => [
+                                                        ...prev,
+                                                        {
+                                                            path: path.path,
+                                                            alias: suggestedAlias,
+                                                        },
+                                                    ]);
                                                 }}
                                                 className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border transition-colors hover:scale-105 ${
                                                     path.type === "string"
@@ -893,8 +828,7 @@ const ApiCallConfig = ({
                                                 </svg>
                                                 <span className="font-mono">
                                                     {path.path.length > 20
-                                                        ? "..." +
-                                                          path.path.slice(-18)
+                                                        ? "..." + path.path.slice(-18)
                                                         : path.path}
                                                 </span>
                                             </button>
@@ -902,18 +836,12 @@ const ApiCallConfig = ({
                                     })}
                             </div>
                             {availablePaths.filter((p) =>
-                                ["string", "number", "boolean"].includes(
-                                    p.type,
-                                ),
+                                ["string", "number", "boolean"].includes(p.type),
                             ).length > 12 && (
                                 <p className="text-xs text-gray-400 mt-1">
                                     +
                                     {availablePaths.filter((p) =>
-                                        [
-                                            "string",
-                                            "number",
-                                            "boolean",
-                                        ].includes(p.type),
+                                        ["string", "number", "boolean"].includes(p.type),
                                     ).length - 12}{" "}
                                     more fields available
                                 </p>
@@ -927,20 +855,13 @@ const ApiCallConfig = ({
                                 Selected mappings:
                             </p>
                             {responseMapping.map((mapping, index) => (
-                                <div
-                                    key={index}
-                                    className="flex gap-2 items-center relative"
-                                >
+                                <div key={index} className="flex gap-2 items-center relative">
                                     <div className="flex-1 relative">
                                         <input
                                             type="text"
                                             value={mapping.path}
                                             onChange={(e) =>
-                                                updateResponseMapping(
-                                                    index,
-                                                    "path",
-                                                    e.target.value,
-                                                )
+                                                updateResponseMapping(index, "path", e.target.value)
                                             }
                                             onFocus={() =>
                                                 availablePaths.length > 0 &&
@@ -952,11 +873,7 @@ const ApiCallConfig = ({
                                         {showPathDropdown === index &&
                                             renderPathDropdown(
                                                 (path) =>
-                                                    updateResponseMapping(
-                                                        index,
-                                                        "path",
-                                                        path,
-                                                    ),
+                                                    updateResponseMapping(index, "path", path),
                                                 mapping.path,
                                             )}
                                     </div>
@@ -977,20 +894,14 @@ const ApiCallConfig = ({
                                         type="text"
                                         value={mapping.alias}
                                         onChange={(e) =>
-                                            updateResponseMapping(
-                                                index,
-                                                "alias",
-                                                e.target.value,
-                                            )
+                                            updateResponseMapping(index, "alias", e.target.value)
                                         }
                                         className="flex-1 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                         placeholder="aliasName"
                                     />
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            removeResponseMapping(index)
-                                        }
+                                        onClick={() => removeResponseMapping(index)}
                                         className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors flex-shrink-0"
                                     >
                                         <svg
@@ -1012,15 +923,14 @@ const ApiCallConfig = ({
                         </div>
                     )}
 
-                    {responseMapping.length === 0 &&
-                        availablePaths.length === 0 && (
-                            <div className="text-center py-3 border border-dashed border-gray-300 dark:border-gray-600 rounded">
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    Use "Test Request" to see available fields,
-                                    or click "Add Manual" to type a path.
-                                </p>
-                            </div>
-                        )}
+                    {responseMapping.length === 0 && availablePaths.length === 0 && (
+                        <div className="text-center py-3 border border-dashed border-gray-300 dark:border-gray-600 rounded">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Use "Test Request" to see available fields, or click "Add Manual" to
+                                type a path.
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -1037,16 +947,12 @@ const ApiCallConfig = ({
                                 {"{{{input}}}"}
                             </code>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                {outputField
-                                    ? `Extracted: ${outputField}`
-                                    : "Full API response"}
+                                {outputField ? `Extracted: ${outputField}` : "Full API response"}
                             </p>
                         </div>
                         <button
                             type="button"
-                            onClick={() =>
-                                navigator.clipboard.writeText("{{{input}}}")
-                            }
+                            onClick={() => navigator.clipboard.writeText("{{{input}}}")}
                             className="p-1 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded"
                             title="Copy to clipboard"
                         >
@@ -1068,9 +974,7 @@ const ApiCallConfig = ({
 
                     {/* Nested field access - show available paths from test */}
                     {availablePaths
-                        .filter((p) =>
-                            ["string", "number", "boolean"].includes(p.type),
-                        )
+                        .filter((p) => ["string", "number", "boolean"].includes(p.type))
                         .slice(0, 3)
                         .map((path, idx) => (
                             <div
@@ -1086,9 +990,7 @@ const ApiCallConfig = ({
                                 <button
                                     type="button"
                                     onClick={() =>
-                                        navigator.clipboard.writeText(
-                                            `{{{input.${path.path}}}}`,
-                                        )
+                                        navigator.clipboard.writeText(`{{{input.${path.path}}}}`)
                                     }
                                     className="p-1 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded"
                                     title="Copy to clipboard"
@@ -1151,21 +1053,18 @@ const ApiCallConfig = ({
                             </div>
                         ))}
 
-                    {availablePaths.length === 0 &&
-                        responseMapping.length === 0 && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400 italic">
-                                Use "Test Request" to see available field
-                                placeholders
-                            </p>
-                        )}
+                    {availablePaths.length === 0 && responseMapping.length === 0 && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                            Use "Test Request" to see available field placeholders
+                        </p>
+                    )}
                 </div>
             </div>
 
             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700">
                 <p className="text-xs text-blue-600 dark:text-blue-400">
-                    <strong>Tip:</strong> Use the "Test Request" button to see
-                    the response structure and easily select fields from the
-                    dropdown.
+                    <strong>Tip:</strong> Use the "Test Request" button to see the response
+                    structure and easily select fields from the dropdown.
                 </p>
             </div>
         </div>

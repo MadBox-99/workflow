@@ -85,9 +85,7 @@ const Toolbar = ({ editor }) => {
 
             {/* Headings */}
             <MenuButton
-                onClick={() =>
-                    editor.chain().focus().toggleHeading({ level: 1 }).run()
-                }
+                onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
                 isActive={editor.isActive("heading", { level: 1 })}
                 title="Heading 1"
             >
@@ -95,9 +93,7 @@ const Toolbar = ({ editor }) => {
             </MenuButton>
 
             <MenuButton
-                onClick={() =>
-                    editor.chain().focus().toggleHeading({ level: 2 }).run()
-                }
+                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
                 isActive={editor.isActive("heading", { level: 2 })}
                 title="Heading 2"
             >
@@ -143,31 +139,13 @@ const Toolbar = ({ editor }) => {
                     <line x1="10" y1="6" x2="20" y2="6" />
                     <line x1="10" y1="12" x2="20" y2="12" />
                     <line x1="10" y1="18" x2="20" y2="18" />
-                    <text
-                        x="2"
-                        y="8"
-                        fontSize="6"
-                        fill="currentColor"
-                        fontWeight="bold"
-                    >
+                    <text x="2" y="8" fontSize="6" fill="currentColor" fontWeight="bold">
                         1
                     </text>
-                    <text
-                        x="2"
-                        y="14"
-                        fontSize="6"
-                        fill="currentColor"
-                        fontWeight="bold"
-                    >
+                    <text x="2" y="14" fontSize="6" fill="currentColor" fontWeight="bold">
                         2
                     </text>
-                    <text
-                        x="2"
-                        y="20"
-                        fontSize="6"
-                        fill="currentColor"
-                        fontWeight="bold"
-                    >
+                    <text x="2" y="20" fontSize="6" fill="currentColor" fontWeight="bold">
                         3
                     </text>
                 </svg>
@@ -306,9 +284,7 @@ const RichTextEditor = ({
             items: ({ query }) => {
                 // Read from ref to get current items without causing editor recreation
                 return mentionItemsRef.current
-                    .filter((item) =>
-                        item.label.toLowerCase().includes(query.toLowerCase()),
-                    )
+                    .filter((item) => item.label.toLowerCase().includes(query.toLowerCase()))
                     .slice(0, 10);
             },
             render: () => {
@@ -385,13 +361,11 @@ const RichTextEditor = ({
                     },
                     suggestion,
                     renderText({ node }) {
-                        const label =
-                            node?.attrs?.label || node?.attrs?.id || "";
+                        const label = node?.attrs?.label || node?.attrs?.id || "";
                         return `@${label}`;
                     },
                     renderHTML({ node, HTMLAttributes }) {
-                        const label =
-                            node?.attrs?.label || node?.attrs?.id || "";
+                        const label = node?.attrs?.label || node?.attrs?.id || "";
                         return [
                             "span",
                             { ...(HTMLAttributes || {}), class: "mention" },

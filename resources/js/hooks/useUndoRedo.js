@@ -24,11 +24,9 @@ export const useUndoRedo = (nodes, edges, setNodes, setEdges) => {
         // Don't save if state hasn't changed
         if (lastSavedState.current) {
             const nodesChanged =
-                JSON.stringify(currentState.nodes) !==
-                JSON.stringify(lastSavedState.current.nodes);
+                JSON.stringify(currentState.nodes) !== JSON.stringify(lastSavedState.current.nodes);
             const edgesChanged =
-                JSON.stringify(currentState.edges) !==
-                JSON.stringify(lastSavedState.current.edges);
+                JSON.stringify(currentState.edges) !== JSON.stringify(lastSavedState.current.edges);
             if (!nodesChanged && !edgesChanged) {
                 return;
             }

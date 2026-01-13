@@ -16,8 +16,7 @@ const getNestedValue = (obj, path) => {
 // Helper to parse dynamic field path configuration (supports both old string format and new { nodeId, path } format)
 const getDynamicPath = (fieldConfig) => {
     if (!fieldConfig) return null;
-    if (typeof fieldConfig === "string")
-        return { nodeId: null, path: fieldConfig };
+    if (typeof fieldConfig === "string") return { nodeId: null, path: fieldConfig };
     if (typeof fieldConfig === "object")
         return { nodeId: fieldConfig.nodeId, path: fieldConfig.path };
     return null;
@@ -30,10 +29,7 @@ const convertHtmlToPlaintext = (html) => {
     let text = html;
 
     // Process mentions - replace <span data-type="mention" ...>@Label</span> with @Label
-    text = text.replace(
-        /<span[^>]*data-type="mention"[^>]*>([^<]*)<\/span>/gi,
-        "$1",
-    );
+    text = text.replace(/<span[^>]*data-type="mention"[^>]*>([^<]*)<\/span>/gi, "$1");
 
     // Replace headings with text and double newlines
     text = text.replace(/<h[1-3][^>]*>(.*?)<\/h[1-3]>/gis, "\n$1\n\n");
@@ -85,13 +81,7 @@ const convertHtmlToPlaintext = (html) => {
     return text.trim();
 };
 
-export const useWorkflowRunner = (
-    nodes,
-    edges,
-    setNodes,
-    setEdges,
-    teamId = null,
-) => {
+export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = null) => {
     const [isRunning, setIsRunning] = useState(false);
     const [currentNodeId, setCurrentNodeId] = useState(null);
     const [executionPath, setExecutionPath] = useState([]);
@@ -119,8 +109,7 @@ export const useWorkflowRunner = (
 
             const outgoingEdges = edges.filter((edge) => {
                 if (edge.source !== nodeId) return false;
-                if (sourceHandle && edge.sourceHandle !== sourceHandle)
-                    return false;
+                if (sourceHandle && edge.sourceHandle !== sourceHandle) return false;
                 return true;
             });
 
@@ -140,9 +129,7 @@ export const useWorkflowRunner = (
     // Find incoming node values (for condition nodes and Google Calendar nodes)
     const getInputValues = useCallback(
         (nodeId) => {
-            const incomingEdges = edges.filter(
-                (edge) => edge.target === nodeId,
-            );
+            const incomingEdges = edges.filter((edge) => edge.target === nodeId);
             const values = {};
 
             console.log(
@@ -178,9 +165,7 @@ export const useWorkflowRunner = (
                     if (targetField) {
                         // Use the targetField as the key (e.g., 'summary', 'startDateTime', 'endDateTime', etc.)
                         values[targetField] = value;
-                        console.log(
-                            `[getInputValues] Set values['${targetField}'] = ${value}`,
-                        );
+                        console.log(`[getInputValues] Set values['${targetField}'] = ${value}`);
                     } else if (edge.targetHandle === "input-a") {
                         values.valueA = value;
                     } else if (edge.targetHandle === "input-b") {
@@ -285,10 +270,7 @@ export const useWorkflowRunner = (
             const config = node.data.config || {};
             const inputValues = getInputValues(node.id);
 
-            console.log(
-                `[Runner] Executing ${nodeType}: ${node.data.label}`,
-                inputValues,
-            );
+            console.log(`[Runner] Executing ${nodeType}: ${node.data.label}`, inputValues);
 
             switch (nodeType) {
                 case "start":
@@ -328,29 +310,19 @@ export const useWorkflowRunner = (
                                 );
                                 break;
                             case "next_week":
-                                result = new Date(
-                                    now.getTime() + 7 * 24 * 60 * 60 * 1000,
-                                );
+                                result = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
                                 break;
                             case "next_month":
-                                result = new Date(
-                                    now.getTime() + 30 * 24 * 60 * 60 * 1000,
-                                );
+                                result = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
                                 break;
                             case "in_1_hour":
-                                result = new Date(
-                                    now.getTime() + 60 * 60 * 1000,
-                                );
+                                result = new Date(now.getTime() + 60 * 60 * 1000);
                                 break;
                             case "in_2_hours":
-                                result = new Date(
-                                    now.getTime() + 2 * 60 * 60 * 1000,
-                                );
+                                result = new Date(now.getTime() + 2 * 60 * 60 * 1000);
                                 break;
                             case "in_30_min":
-                                result = new Date(
-                                    now.getTime() + 30 * 60 * 1000,
-                                );
+                                result = new Date(now.getTime() + 30 * 60 * 1000);
                                 break;
                             case "end_of_day":
                                 result = new Date(
@@ -371,8 +343,7 @@ export const useWorkflowRunner = (
                                 const amount = config.offsetAmount || 1;
                                 const unit = config.offsetUnit || "hours";
                                 result = new Date(
-                                    now.getTime() +
-                                        amount * (multipliers[unit] || 0),
+                                    now.getTime() + amount * (multipliers[unit] || 0),
                                 );
                                 break;
                             }
@@ -394,13 +365,8 @@ export const useWorkflowRunner = (
                     }
 
                     // Handle richtext with plaintext output format
-                    if (
-                        config.valueType === "richtext" &&
-                        config.outputFormat === "plaintext"
-                    ) {
-                        const plaintext = convertHtmlToPlaintext(
-                            config.value || "",
-                        );
+                    if (config.valueType === "richtext" && config.outputFormat === "plaintext") {
+                        const plaintext = convertHtmlToPlaintext(config.value || "");
                         console.log(
                             `[Runner] Constant richtext -> plaintext: ${plaintext.substring(0, 100)}...`,
                         );
@@ -452,26 +418,17 @@ export const useWorkflowRunner = (
                             result = a !== "" && a !== null && a !== undefined;
                             break;
                         case "isTrue":
-                            result =
-                                a === true ||
-                                a === "true" ||
-                                a === 1 ||
-                                a === "1";
+                            result = a === true || a === "true" || a === 1 || a === "1";
                             break;
                         case "isFalse":
-                            result =
-                                a === false ||
-                                a === "false" ||
-                                a === 0 ||
-                                a === "0";
+                            result = a === false || a === "false" || a === 0 || a === "0";
                             break;
                         default:
                             result = false;
                     }
 
                     const shouldContinue =
-                        (passWhen === "true" && result) ||
-                        (passWhen === "false" && !result);
+                        (passWhen === "true" && result) || (passWhen === "false" && !result);
                     console.log(
                         `[Condition] ${a} ${operator} ${b} = ${result}, passWhen: ${passWhen}, continue: ${shouldContinue}`,
                     );
@@ -502,15 +459,11 @@ export const useWorkflowRunner = (
                     const inputIds = node.data.inputs || ["input-1", "input-2"];
 
                     // Collect values from all connected inputs
-                    const incomingEdges = edges.filter(
-                        (edge) => edge.target === node.id,
-                    );
+                    const incomingEdges = edges.filter((edge) => edge.target === node.id);
                     const valuesBySlot = {};
 
                     for (const edge of incomingEdges) {
-                        const sourceNode = nodes.find(
-                            (n) => n.id === edge.source,
-                        );
+                        const sourceNode = nodes.find((n) => n.id === edge.source);
                         if (sourceNode) {
                             const value =
                                 sourceNode.data.outputValue ??
@@ -518,12 +471,9 @@ export const useWorkflowRunner = (
                                 sourceNode.data.lastResponse;
                             if (value !== undefined && value !== null) {
                                 // Check if source node has a targetField configured
-                                const targetField =
-                                    sourceNode.data.config?.targetField;
-                                const targetHandle =
-                                    targetField || edge.targetHandle;
-                                const slotIndex =
-                                    inputIds.indexOf(targetHandle);
+                                const targetField = sourceNode.data.config?.targetField;
+                                const targetHandle = targetField || edge.targetHandle;
+                                const slotIndex = inputIds.indexOf(targetHandle);
                                 if (slotIndex !== -1) {
                                     valuesBySlot[slotIndex] = String(value);
                                 }
@@ -551,15 +501,11 @@ export const useWorkflowRunner = (
                     const inputIds = node.data.inputs || ["input-1", "input-2"];
 
                     // Collect values from all connected inputs
-                    const incomingEdges = edges.filter(
-                        (edge) => edge.target === node.id,
-                    );
+                    const incomingEdges = edges.filter((edge) => edge.target === node.id);
                     const valuesByIndex = {};
 
                     for (const edge of incomingEdges) {
-                        const sourceNode = nodes.find(
-                            (n) => n.id === edge.source,
-                        );
+                        const sourceNode = nodes.find((n) => n.id === edge.source);
                         if (sourceNode) {
                             const value =
                                 sourceNode.data.outputValue ??
@@ -567,12 +513,9 @@ export const useWorkflowRunner = (
                                 sourceNode.data.lastResponse;
                             if (value !== undefined && value !== null) {
                                 // Check if source node has a targetField configured
-                                const targetField =
-                                    sourceNode.data.config?.targetField;
-                                const targetHandle =
-                                    targetField || edge.targetHandle;
-                                const inputIndex =
-                                    inputIds.indexOf(targetHandle);
+                                const targetField = sourceNode.data.config?.targetField;
+                                const targetHandle = targetField || edge.targetHandle;
+                                const inputIndex = inputIds.indexOf(targetHandle);
                                 if (inputIndex !== -1) {
                                     valuesByIndex[inputIndex + 1] = value; // 1-indexed for ${input1}, ${input2}, etc.
                                 }
@@ -588,13 +531,10 @@ export const useWorkflowRunner = (
                     );
 
                     // Replace ${inputN} placeholders with actual values
-                    const result = processedTemplate.replace(
-                        /\$\{input(\d+)\}/g,
-                        (match, num) => {
-                            const value = valuesByIndex[parseInt(num)];
-                            return value !== undefined ? String(value) : match;
-                        },
-                    );
+                    const result = processedTemplate.replace(/\$\{input(\d+)\}/g, (match, num) => {
+                        const value = valuesByIndex[parseInt(num)];
+                        return value !== undefined ? String(value) : match;
+                    });
 
                     console.log(
                         `[Runner] Template node: values:`,
@@ -625,9 +565,7 @@ export const useWorkflowRunner = (
                             Accept: "application/json",
                             ...headers,
                         },
-                        body: ["POST", "PUT", "PATCH"].includes(
-                            method.toUpperCase(),
-                        )
+                        body: ["POST", "PUT", "PATCH"].includes(method.toUpperCase())
                             ? JSON.stringify(requestBody)
                             : undefined,
                     });
@@ -639,10 +577,7 @@ export const useWorkflowRunner = (
                         const mapped = {};
                         responseMapping.forEach((mapping) => {
                             if (mapping.alias && mapping.path) {
-                                const value = getNestedValue(
-                                    data,
-                                    mapping.path,
-                                );
+                                const value = getNestedValue(data, mapping.path);
                                 if (value !== undefined) {
                                     mapped[mapping.alias] = value;
                                 }
@@ -651,10 +586,7 @@ export const useWorkflowRunner = (
                         // Attach _mapped to the data object so downstream nodes can access it
                         if (Object.keys(mapped).length > 0) {
                             data._mapped = mapped;
-                            console.log(
-                                "[Runner] Applied responseMapping, _mapped:",
-                                mapped,
-                            );
+                            console.log("[Runner] Applied responseMapping, _mapped:", mapped);
                         }
                     }
 
@@ -666,34 +598,27 @@ export const useWorkflowRunner = (
                         throw new Error("Email Action requires a template");
                     }
                     if (!config.recipients || config.recipients.length === 0) {
-                        throw new Error(
-                            "Email Action requires at least one recipient",
-                        );
+                        throw new Error("Email Action requires at least one recipient");
                     }
 
-                    const emailResponse = await fetch(
-                        "/api/workflows/actions/email",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                Accept: "application/json",
-                            },
-                            body: JSON.stringify({
-                                template: config.template,
-                                recipients: config.recipients,
-                                subject: config.subject,
-                                customData: config.customData || {},
-                            }),
+                    const emailResponse = await fetch("/api/workflows/actions/email", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Accept: "application/json",
                         },
-                    );
+                        body: JSON.stringify({
+                            template: config.template,
+                            recipients: config.recipients,
+                            subject: config.subject,
+                            customData: config.customData || {},
+                        }),
+                    });
 
                     const emailData = await emailResponse.json();
 
                     if (!emailResponse.ok || !emailData.success) {
-                        throw new Error(
-                            emailData.error || "Failed to send email",
-                        );
+                        throw new Error(emailData.error || "Failed to send email");
                     }
 
                     console.log("[Runner] Email sent successfully:", emailData);
@@ -702,15 +627,11 @@ export const useWorkflowRunner = (
 
                 case "googleCalendarAction": {
                     if (!teamId) {
-                        throw new Error(
-                            "Team ID is required for Google Calendar actions",
-                        );
+                        throw new Error("Team ID is required for Google Calendar actions");
                     }
 
                     if (!config.operation) {
-                        throw new Error(
-                            "Google Calendar action requires an operation",
-                        );
+                        throw new Error("Google Calendar action requires an operation");
                     }
 
                     // Helper to check if value is a placeholder pattern
@@ -719,8 +640,7 @@ export const useWorkflowRunner = (
 
                     // Helper to get value, clearing placeholders
                     const getValue = (inputVal, configVal) => {
-                        if (inputVal !== undefined && inputVal !== null)
-                            return inputVal;
+                        if (inputVal !== undefined && inputVal !== null) return inputVal;
                         if (isPlaceholder(configVal)) return null; // Clear unreplaced placeholders
                         return configVal;
                     };
@@ -750,26 +670,11 @@ export const useWorkflowRunner = (
                     // Use input values from connected nodes if available, otherwise fall back to config
                     // If the config value is a placeholder but no input provides it, use null (will get default on backend)
                     let summary = getValue(inputValues.summary, config.summary);
-                    let description = getValue(
-                        inputValues.description,
-                        config.description,
-                    );
-                    let location = getValue(
-                        inputValues.location,
-                        config.location,
-                    );
-                    let startDateTime = getValue(
-                        inputValues.startDateTime,
-                        config.startDateTime,
-                    );
-                    let endDateTime = getValue(
-                        inputValues.endDateTime,
-                        config.endDateTime,
-                    );
-                    let attendees = getValue(
-                        inputValues.attendees,
-                        config.attendees,
-                    );
+                    let description = getValue(inputValues.description, config.description);
+                    let location = getValue(inputValues.location, config.location);
+                    let startDateTime = getValue(inputValues.startDateTime, config.startDateTime);
+                    let endDateTime = getValue(inputValues.endDateTime, config.endDateTime);
+                    let attendees = getValue(inputValues.attendees, config.attendees);
                     const eventId = getValue(eventIdFromInput, config.eventId);
 
                     // Handle dynamic fields from connected action node (API, etc.)
@@ -813,11 +718,7 @@ export const useWorkflowRunner = (
                                     description =
                                         typeof extracted === "string"
                                             ? extracted
-                                            : JSON.stringify(
-                                                  extracted,
-                                                  null,
-                                                  2,
-                                              );
+                                            : JSON.stringify(extracted, null, 2);
                                     console.log(
                                         "[Runner] Using dynamic description from path",
                                         dynamicFieldPaths.description,
@@ -846,9 +747,7 @@ export const useWorkflowRunner = (
                                 }
                             } else {
                                 location =
-                                    inputData._mapped?.location ??
-                                    inputData.location ??
-                                    location;
+                                    inputData._mapped?.location ?? inputData.location ?? location;
                             }
                         }
                     }
@@ -864,10 +763,7 @@ export const useWorkflowRunner = (
                         "Paths:",
                         JSON.stringify(dynamicFieldPaths),
                     );
-                    console.log(
-                        "[Runner] Input values:",
-                        JSON.stringify(inputValues),
-                    );
+                    console.log("[Runner] Input values:", JSON.stringify(inputValues));
                     console.log(
                         "[Runner] Final values - summary:",
                         summary,
@@ -879,31 +775,28 @@ export const useWorkflowRunner = (
                         eventId,
                     );
 
-                    const calendarResponse = await fetch(
-                        "/api/workflows/actions/google-calendar",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                Accept: "application/json",
-                            },
-                            body: JSON.stringify({
-                                team_id: teamId,
-                                operation: config.operation,
-                                calendarId: config.calendarId || "primary",
-                                summary: summary,
-                                description: description,
-                                startDateTime: startDateTime,
-                                endDateTime: endDateTime,
-                                location: location,
-                                attendees: attendees,
-                                eventId: eventId,
-                                timeMin: config.timeMin,
-                                timeMax: config.timeMax,
-                                maxResults: config.maxResults,
-                            }),
+                    const calendarResponse = await fetch("/api/workflows/actions/google-calendar", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Accept: "application/json",
                         },
-                    );
+                        body: JSON.stringify({
+                            team_id: teamId,
+                            operation: config.operation,
+                            calendarId: config.calendarId || "primary",
+                            summary: summary,
+                            description: description,
+                            startDateTime: startDateTime,
+                            endDateTime: endDateTime,
+                            location: location,
+                            attendees: attendees,
+                            eventId: eventId,
+                            timeMin: config.timeMin,
+                            timeMax: config.timeMax,
+                            maxResults: config.maxResults,
+                        }),
+                    });
 
                     const calendarData = await calendarResponse.json();
 
@@ -916,15 +809,11 @@ export const useWorkflowRunner = (
                             );
                         }
                         throw new Error(
-                            calendarData.error ||
-                                "Failed to execute Google Calendar action",
+                            calendarData.error || "Failed to execute Google Calendar action",
                         );
                     }
 
-                    console.log(
-                        "[Runner] Google Calendar action completed:",
-                        calendarData,
-                    );
+                    console.log("[Runner] Google Calendar action completed:", calendarData);
 
                     // Handle delete operation - return special marker
                     if (calendarData.deleted) {
@@ -941,15 +830,11 @@ export const useWorkflowRunner = (
 
                 case "googleDocsAction": {
                     if (!teamId) {
-                        throw new Error(
-                            "Team ID is required for Google Docs actions",
-                        );
+                        throw new Error("Team ID is required for Google Docs actions");
                     }
 
                     if (!config.operation) {
-                        throw new Error(
-                            "Google Docs action requires an operation",
-                        );
+                        throw new Error("Google Docs action requires an operation");
                     }
 
                     // Helper to check if value is a placeholder pattern
@@ -958,8 +843,7 @@ export const useWorkflowRunner = (
 
                     // Helper to get value, clearing placeholders
                     const getValue = (inputVal, configVal) => {
-                        if (inputVal !== undefined && inputVal !== null)
-                            return inputVal;
+                        if (inputVal !== undefined && inputVal !== null) return inputVal;
                         if (isPlaceholder(configVal)) return null;
                         return configVal;
                     };
@@ -1002,28 +886,17 @@ export const useWorkflowRunner = (
                     // Extract values using dynamic field paths from API response
                     let title = getValue(inputValues.title, config.title);
                     let content = getValue(inputValues.content, config.content);
-                    const documentId = getValue(
-                        documentIdFromInput,
-                        config.documentId,
-                    );
+                    const documentId = getValue(documentIdFromInput, config.documentId);
 
                     // Handle dynamic title from connected action node (API, Constant, etc.)
                     if (dynamicFields.title) {
-                        const titlePathConfig = getDynamicPath(
-                            dynamicFieldPaths.title,
-                        );
-                        const inputData = getSourceData(
-                            dynamicFieldPaths.title,
-                            inputValues.input,
-                        );
+                        const titlePathConfig = getDynamicPath(dynamicFieldPaths.title);
+                        const inputData = getSourceData(dynamicFieldPaths.title, inputValues.input);
 
                         if (inputData !== undefined && inputData !== null) {
                             if (typeof inputData === "string") {
                                 title = inputData;
-                                console.log(
-                                    "[Runner] Using dynamic title from constant:",
-                                    title,
-                                );
+                                console.log("[Runner] Using dynamic title from constant:", title);
                             } else if (typeof inputData === "object") {
                                 if (titlePathConfig?.path) {
                                     const extracted = getNestedValue(
@@ -1060,9 +933,7 @@ export const useWorkflowRunner = (
 
                     // Handle dynamic content from connected action node (API, Constant, etc.)
                     if (dynamicFields.content) {
-                        const contentPathConfig = getDynamicPath(
-                            dynamicFieldPaths.content,
-                        );
+                        const contentPathConfig = getDynamicPath(dynamicFieldPaths.content);
                         const inputData = getSourceData(
                             dynamicFieldPaths.content,
                             inputValues.input,
@@ -1071,9 +942,7 @@ export const useWorkflowRunner = (
                         if (inputData !== undefined && inputData !== null) {
                             if (typeof inputData === "string") {
                                 content = inputData;
-                                console.log(
-                                    "[Runner] Using dynamic content from constant",
-                                );
+                                console.log("[Runner] Using dynamic content from constant");
                             } else if (typeof inputData === "object") {
                                 if (contentPathConfig?.path) {
                                     const extracted = getNestedValue(
@@ -1084,11 +953,7 @@ export const useWorkflowRunner = (
                                         content =
                                             typeof extracted === "string"
                                                 ? extracted
-                                                : JSON.stringify(
-                                                      extracted,
-                                                      null,
-                                                      2,
-                                                  );
+                                                : JSON.stringify(extracted, null, 2);
                                         console.log(
                                             "[Runner] Using dynamic content from path",
                                             contentPathConfig.path,
@@ -1102,28 +967,20 @@ export const useWorkflowRunner = (
                                         inputData.body ??
                                         inputData.text ??
                                         JSON.stringify(inputData, null, 2);
-                                    console.log(
-                                        "[Runner] Using auto-detected dynamic content",
-                                    );
+                                    console.log("[Runner] Using auto-detected dynamic content");
                                 }
                             }
                         }
                     }
 
-                    console.log(
-                        "[Runner] Executing Google Docs action:",
-                        config.operation,
-                    );
+                    console.log("[Runner] Executing Google Docs action:", config.operation);
                     console.log(
                         "[Runner] Dynamic fields:",
                         JSON.stringify(dynamicFields),
                         "Paths:",
                         JSON.stringify(dynamicFieldPaths),
                     );
-                    console.log(
-                        "[Runner] Input values:",
-                        JSON.stringify(inputValues),
-                    );
+                    console.log("[Runner] Input values:", JSON.stringify(inputValues));
                     console.log(
                         "[Runner] Final values - title:",
                         title,
@@ -1138,9 +995,7 @@ export const useWorkflowRunner = (
                         operation: config.operation,
                         // Only include documentId if it's a non-empty string (required for read/update, not for create)
                         documentId:
-                            documentId && typeof documentId === "string"
-                                ? documentId
-                                : undefined,
+                            documentId && typeof documentId === "string" ? documentId : undefined,
                         title: title,
                         content: content,
                         updateOperation: config.updateOperation,
@@ -1153,17 +1008,14 @@ export const useWorkflowRunner = (
                         requestBodyExec,
                     );
 
-                    const docsResponse = await fetch(
-                        "/api/workflows/actions/google-docs",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                Accept: "application/json",
-                            },
-                            body: JSON.stringify(requestBodyExec),
+                    const docsResponse = await fetch("/api/workflows/actions/google-docs", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Accept: "application/json",
                         },
-                    );
+                        body: JSON.stringify(requestBodyExec),
+                    });
 
                     const docsData = await docsResponse.json();
 
@@ -1174,10 +1026,7 @@ export const useWorkflowRunner = (
                             docsData,
                         );
                         if (docsData.errorCode === "DOCUMENT_NOT_FOUND") {
-                            console.warn(
-                                "[Runner] Document not found:",
-                                docsData.error,
-                            );
+                            console.warn("[Runner] Document not found:", docsData.error);
                         }
                         const errorMsgExec =
                             docsData.message ||
@@ -1186,10 +1035,7 @@ export const useWorkflowRunner = (
                         throw new Error(errorMsgExec);
                     }
 
-                    console.log(
-                        "[Runner] Google Docs action completed:",
-                        docsData,
-                    );
+                    console.log("[Runner] Google Docs action completed:", docsData);
                     return { success: true, output: docsData.data };
                 }
 
@@ -1251,29 +1097,19 @@ export const useWorkflowRunner = (
                                 );
                                 break;
                             case "next_week":
-                                result = new Date(
-                                    now.getTime() + 7 * 24 * 60 * 60 * 1000,
-                                );
+                                result = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
                                 break;
                             case "next_month":
-                                result = new Date(
-                                    now.getTime() + 30 * 24 * 60 * 60 * 1000,
-                                );
+                                result = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
                                 break;
                             case "in_1_hour":
-                                result = new Date(
-                                    now.getTime() + 60 * 60 * 1000,
-                                );
+                                result = new Date(now.getTime() + 60 * 60 * 1000);
                                 break;
                             case "in_2_hours":
-                                result = new Date(
-                                    now.getTime() + 2 * 60 * 60 * 1000,
-                                );
+                                result = new Date(now.getTime() + 2 * 60 * 60 * 1000);
                                 break;
                             case "in_30_min":
-                                result = new Date(
-                                    now.getTime() + 30 * 60 * 1000,
-                                );
+                                result = new Date(now.getTime() + 30 * 60 * 1000);
                                 break;
                             case "end_of_day":
                                 result = new Date(
@@ -1294,8 +1130,7 @@ export const useWorkflowRunner = (
                                 const amount = config.offsetAmount || 1;
                                 const unit = config.offsetUnit || "hours";
                                 result = new Date(
-                                    now.getTime() +
-                                        amount * (multipliers[unit] || 0),
+                                    now.getTime() + amount * (multipliers[unit] || 0),
                                 );
                                 break;
                             }
@@ -1316,13 +1151,8 @@ export const useWorkflowRunner = (
                     }
 
                     // Handle richtext with plaintext output format
-                    if (
-                        config.valueType === "richtext" &&
-                        config.outputFormat === "plaintext"
-                    ) {
-                        const plaintext = convertHtmlToPlaintext(
-                            config.value || "",
-                        );
+                    if (config.valueType === "richtext" && config.outputFormat === "plaintext") {
+                        const plaintext = convertHtmlToPlaintext(config.value || "");
                         console.log(
                             `[Runner] Constant richtext -> plaintext: ${plaintext.substring(0, 100)}...`,
                         );
@@ -1374,26 +1204,17 @@ export const useWorkflowRunner = (
                             result = a !== "" && a !== null && a !== undefined;
                             break;
                         case "isTrue":
-                            result =
-                                a === true ||
-                                a === "true" ||
-                                a === 1 ||
-                                a === "1";
+                            result = a === true || a === "true" || a === 1 || a === "1";
                             break;
                         case "isFalse":
-                            result =
-                                a === false ||
-                                a === "false" ||
-                                a === 0 ||
-                                a === "0";
+                            result = a === false || a === "false" || a === 0 || a === "0";
                             break;
                         default:
                             result = false;
                     }
 
                     const shouldContinue =
-                        (passWhen === "true" && result) ||
-                        (passWhen === "false" && !result);
+                        (passWhen === "true" && result) || (passWhen === "false" && !result);
                     console.log(
                         `[Runner] Condition: ${a} ${operator} ${b} = ${result}, passWhen: ${passWhen}, continue: ${shouldContinue}`,
                     );
@@ -1450,13 +1271,10 @@ export const useWorkflowRunner = (
                     });
 
                     // Replace placeholders in template
-                    const result = templateStr.replace(
-                        /\$\{input(\d+)\}/g,
-                        (match, num) => {
-                            const value = valuesByIndex[parseInt(num)];
-                            return value !== undefined ? String(value) : match;
-                        },
-                    );
+                    const result = templateStr.replace(/\$\{input(\d+)\}/g, (match, num) => {
+                        const value = valuesByIndex[parseInt(num)];
+                        return value !== undefined ? String(value) : match;
+                    });
 
                     console.log(
                         `[Runner] Template (with inputs): template="${templateStr}", values:`,
@@ -1469,15 +1287,11 @@ export const useWorkflowRunner = (
 
                 case "googleCalendarAction": {
                     if (!teamId) {
-                        throw new Error(
-                            "Team ID is required for Google Calendar actions",
-                        );
+                        throw new Error("Team ID is required for Google Calendar actions");
                     }
 
                     if (!config.operation) {
-                        throw new Error(
-                            "Google Calendar action requires an operation",
-                        );
+                        throw new Error("Google Calendar action requires an operation");
                     }
 
                     // Helper to check if value is a placeholder pattern
@@ -1486,8 +1300,7 @@ export const useWorkflowRunner = (
 
                     // Helper to get value, clearing placeholders
                     const getValue = (inputVal, configVal) => {
-                        if (inputVal !== undefined && inputVal !== null)
-                            return inputVal;
+                        if (inputVal !== undefined && inputVal !== null) return inputVal;
                         if (isPlaceholder(configVal)) return null; // Clear unreplaced placeholders
                         return configVal;
                     };
@@ -1517,26 +1330,11 @@ export const useWorkflowRunner = (
                     // Use input values from connected nodes if available, otherwise fall back to config
                     // If the config value is a placeholder but no input provides it, use null (will get default on backend)
                     let summary = getValue(inputValues.summary, config.summary);
-                    let description = getValue(
-                        inputValues.description,
-                        config.description,
-                    );
-                    let location = getValue(
-                        inputValues.location,
-                        config.location,
-                    );
-                    let startDateTime = getValue(
-                        inputValues.startDateTime,
-                        config.startDateTime,
-                    );
-                    let endDateTime = getValue(
-                        inputValues.endDateTime,
-                        config.endDateTime,
-                    );
-                    let attendees = getValue(
-                        inputValues.attendees,
-                        config.attendees,
-                    );
+                    let description = getValue(inputValues.description, config.description);
+                    let location = getValue(inputValues.location, config.location);
+                    let startDateTime = getValue(inputValues.startDateTime, config.startDateTime);
+                    let endDateTime = getValue(inputValues.endDateTime, config.endDateTime);
+                    let attendees = getValue(inputValues.attendees, config.attendees);
                     const eventId = getValue(eventIdFromInput, config.eventId);
 
                     // Handle dynamic fields from connected action node (API, etc.)
@@ -1580,11 +1378,7 @@ export const useWorkflowRunner = (
                                     description =
                                         typeof extracted === "string"
                                             ? extracted
-                                            : JSON.stringify(
-                                                  extracted,
-                                                  null,
-                                                  2,
-                                              );
+                                            : JSON.stringify(extracted, null, 2);
                                     console.log(
                                         "[Runner] Using dynamic description from path",
                                         dynamicFieldPaths.description,
@@ -1613,9 +1407,7 @@ export const useWorkflowRunner = (
                                 }
                             } else {
                                 location =
-                                    inputData._mapped?.location ??
-                                    inputData.location ??
-                                    location;
+                                    inputData._mapped?.location ?? inputData.location ?? location;
                             }
                         }
                     }
@@ -1626,10 +1418,7 @@ export const useWorkflowRunner = (
                         "Paths:",
                         JSON.stringify(dynamicFieldPaths),
                     );
-                    console.log(
-                        "[Runner] Input values:",
-                        JSON.stringify(inputValues),
-                    );
+                    console.log("[Runner] Input values:", JSON.stringify(inputValues));
                     console.log(
                         "[Runner] Final values - summary:",
                         summary,
@@ -1641,31 +1430,28 @@ export const useWorkflowRunner = (
                         eventId,
                     );
 
-                    const calendarResponse = await fetch(
-                        "/api/workflows/actions/google-calendar",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                Accept: "application/json",
-                            },
-                            body: JSON.stringify({
-                                team_id: teamId,
-                                operation: config.operation,
-                                calendarId: config.calendarId || "primary",
-                                summary: summary,
-                                description: description,
-                                startDateTime: startDateTime,
-                                endDateTime: endDateTime,
-                                location: location,
-                                attendees: attendees,
-                                eventId: eventId,
-                                timeMin: config.timeMin,
-                                timeMax: config.timeMax,
-                                maxResults: config.maxResults,
-                            }),
+                    const calendarResponse = await fetch("/api/workflows/actions/google-calendar", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Accept: "application/json",
                         },
-                    );
+                        body: JSON.stringify({
+                            team_id: teamId,
+                            operation: config.operation,
+                            calendarId: config.calendarId || "primary",
+                            summary: summary,
+                            description: description,
+                            startDateTime: startDateTime,
+                            endDateTime: endDateTime,
+                            location: location,
+                            attendees: attendees,
+                            eventId: eventId,
+                            timeMin: config.timeMin,
+                            timeMax: config.timeMax,
+                            maxResults: config.maxResults,
+                        }),
+                    });
 
                     const calendarData = await calendarResponse.json();
 
@@ -1678,15 +1464,11 @@ export const useWorkflowRunner = (
                             );
                         }
                         throw new Error(
-                            calendarData.error ||
-                                "Failed to execute Google Calendar action",
+                            calendarData.error || "Failed to execute Google Calendar action",
                         );
                     }
 
-                    console.log(
-                        "[Runner] Google Calendar action completed:",
-                        calendarData,
-                    );
+                    console.log("[Runner] Google Calendar action completed:", calendarData);
 
                     // Handle delete operation - return special marker
                     if (calendarData.deleted) {
@@ -1703,15 +1485,11 @@ export const useWorkflowRunner = (
 
                 case "googleDocsAction": {
                     if (!teamId) {
-                        throw new Error(
-                            "Team ID is required for Google Docs actions",
-                        );
+                        throw new Error("Team ID is required for Google Docs actions");
                     }
 
                     if (!config.operation) {
-                        throw new Error(
-                            "Google Docs action requires an operation",
-                        );
+                        throw new Error("Google Docs action requires an operation");
                     }
 
                     // Helper to check if value is a placeholder pattern
@@ -1720,8 +1498,7 @@ export const useWorkflowRunner = (
 
                     // Helper to get value, clearing placeholders
                     const getValue = (inputVal, configVal) => {
-                        if (inputVal !== undefined && inputVal !== null)
-                            return inputVal;
+                        if (inputVal !== undefined && inputVal !== null) return inputVal;
                         if (isPlaceholder(configVal)) return null;
                         return configVal;
                     };
@@ -1764,28 +1541,17 @@ export const useWorkflowRunner = (
                     // Extract values using dynamic field paths from API response
                     let title = getValue(inputValues.title, config.title);
                     let content = getValue(inputValues.content, config.content);
-                    const documentId = getValue(
-                        documentIdFromInput,
-                        config.documentId,
-                    );
+                    const documentId = getValue(documentIdFromInput, config.documentId);
 
                     // Handle dynamic title from connected action node (API, Constant, etc.)
                     if (dynamicFields.title) {
-                        const titlePathConfig = getDynamicPath(
-                            dynamicFieldPaths.title,
-                        );
-                        const inputData = getSourceData(
-                            dynamicFieldPaths.title,
-                            inputValues.input,
-                        );
+                        const titlePathConfig = getDynamicPath(dynamicFieldPaths.title);
+                        const inputData = getSourceData(dynamicFieldPaths.title, inputValues.input);
 
                         if (inputData !== undefined && inputData !== null) {
                             if (typeof inputData === "string") {
                                 title = inputData;
-                                console.log(
-                                    "[Runner] Using dynamic title from constant:",
-                                    title,
-                                );
+                                console.log("[Runner] Using dynamic title from constant:", title);
                             } else if (typeof inputData === "object") {
                                 if (titlePathConfig?.path) {
                                     const extracted = getNestedValue(
@@ -1822,9 +1588,7 @@ export const useWorkflowRunner = (
 
                     // Handle dynamic content from connected action node (API, Constant, etc.)
                     if (dynamicFields.content) {
-                        const contentPathConfig = getDynamicPath(
-                            dynamicFieldPaths.content,
-                        );
+                        const contentPathConfig = getDynamicPath(dynamicFieldPaths.content);
                         const inputData = getSourceData(
                             dynamicFieldPaths.content,
                             inputValues.input,
@@ -1833,9 +1597,7 @@ export const useWorkflowRunner = (
                         if (inputData !== undefined && inputData !== null) {
                             if (typeof inputData === "string") {
                                 content = inputData;
-                                console.log(
-                                    "[Runner] Using dynamic content from constant",
-                                );
+                                console.log("[Runner] Using dynamic content from constant");
                             } else if (typeof inputData === "object") {
                                 if (contentPathConfig?.path) {
                                     const extracted = getNestedValue(
@@ -1846,11 +1608,7 @@ export const useWorkflowRunner = (
                                         content =
                                             typeof extracted === "string"
                                                 ? extracted
-                                                : JSON.stringify(
-                                                      extracted,
-                                                      null,
-                                                      2,
-                                                  );
+                                                : JSON.stringify(extracted, null, 2);
                                         console.log(
                                             "[Runner] Using dynamic content from path",
                                             contentPathConfig.path,
@@ -1864,9 +1622,7 @@ export const useWorkflowRunner = (
                                         inputData.body ??
                                         inputData.text ??
                                         JSON.stringify(inputData, null, 2);
-                                    console.log(
-                                        "[Runner] Using auto-detected dynamic content",
-                                    );
+                                    console.log("[Runner] Using auto-detected dynamic content");
                                 }
                             }
                         }
@@ -1878,10 +1634,7 @@ export const useWorkflowRunner = (
                         "Paths:",
                         JSON.stringify(dynamicFieldPaths),
                     );
-                    console.log(
-                        "[Runner] Input values:",
-                        JSON.stringify(inputValues),
-                    );
+                    console.log("[Runner] Input values:", JSON.stringify(inputValues));
                     console.log(
                         "[Runner] Final values - title:",
                         title,
@@ -1896,9 +1649,7 @@ export const useWorkflowRunner = (
                         operation: config.operation,
                         // Only include documentId if it's a non-empty string (required for read/update, not for create)
                         documentId:
-                            documentId && typeof documentId === "string"
-                                ? documentId
-                                : undefined,
+                            documentId && typeof documentId === "string" ? documentId : undefined,
                         title: title,
                         content: content,
                         updateOperation: config.updateOperation,
@@ -1906,22 +1657,16 @@ export const useWorkflowRunner = (
                         insertIndex: config.insertIndex,
                         maxResults: config.maxResults,
                     };
-                    console.log(
-                        "[Runner] Sending Google Docs request:",
-                        requestBody,
-                    );
+                    console.log("[Runner] Sending Google Docs request:", requestBody);
 
-                    const docsResponse = await fetch(
-                        "/api/workflows/actions/google-docs",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                Accept: "application/json",
-                            },
-                            body: JSON.stringify(requestBody),
+                    const docsResponse = await fetch("/api/workflows/actions/google-docs", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Accept: "application/json",
                         },
-                    );
+                        body: JSON.stringify(requestBody),
+                    });
 
                     const docsData = await docsResponse.json();
 
@@ -1932,10 +1677,7 @@ export const useWorkflowRunner = (
                             docsData,
                         );
                         if (docsData.errorCode === "DOCUMENT_NOT_FOUND") {
-                            console.warn(
-                                "[Runner] Document not found:",
-                                docsData.error,
-                            );
+                            console.warn("[Runner] Document not found:", docsData.error);
                         }
                         // For validation errors (422), show the detailed message
                         const errorMessage =
@@ -1945,10 +1687,7 @@ export const useWorkflowRunner = (
                         throw new Error(errorMessage);
                     }
 
-                    console.log(
-                        "[Runner] Google Docs action completed:",
-                        docsData,
-                    );
+                    console.log("[Runner] Google Docs action completed:", docsData);
                     return { success: true, output: docsData.data };
                 }
 
@@ -1972,9 +1711,7 @@ export const useWorkflowRunner = (
                             Accept: "application/json",
                             ...headers,
                         },
-                        body: ["POST", "PUT", "PATCH"].includes(
-                            method.toUpperCase(),
-                        )
+                        body: ["POST", "PUT", "PATCH"].includes(method.toUpperCase())
                             ? JSON.stringify(requestBody)
                             : undefined,
                     });
@@ -1986,10 +1723,7 @@ export const useWorkflowRunner = (
                         const mapped = {};
                         responseMapping.forEach((mapping) => {
                             if (mapping.alias && mapping.path) {
-                                const value = getNestedValue(
-                                    data,
-                                    mapping.path,
-                                );
+                                const value = getNestedValue(data, mapping.path);
                                 if (value !== undefined) {
                                     mapped[mapping.alias] = value;
                                 }
@@ -2021,16 +1755,12 @@ export const useWorkflowRunner = (
         async (node, visited, executedNodes, nodeOutputs) => {
             // Skip if already executed in this run
             if (executedNodes.has(node.id)) {
-                console.log(
-                    `[Runner] Node ${node.id} already executed, skipping`,
-                );
+                console.log(`[Runner] Node ${node.id} already executed, skipping`);
                 return nodeOutputs.get(node.id);
             }
 
             // Find all incoming edges (input dependencies)
-            const incomingEdges = edges.filter(
-                (edge) => edge.target === node.id,
-            );
+            const incomingEdges = edges.filter((edge) => edge.target === node.id);
 
             // Execute all input dependencies first (but not start nodes or nodes in the main flow)
             for (const edge of incomingEdges) {
@@ -2066,16 +1796,12 @@ export const useWorkflowRunner = (
                     // Build input values from nodeOutputs (synchronous map) instead of React state
                     const inputValues = {};
                     incomingEdges.forEach((edge) => {
-                        const sourceNode = nodes.find(
-                            (n) => n.id === edge.source,
-                        );
+                        const sourceNode = nodes.find((n) => n.id === edge.source);
                         if (sourceNode) {
                             // Get output from our synchronous map, or fall back to config
                             const value =
-                                nodeOutputs.get(sourceNode.id) ??
-                                sourceNode.data.config?.value;
-                            const targetField =
-                                sourceNode.data.config?.targetField;
+                                nodeOutputs.get(sourceNode.id) ?? sourceNode.data.config?.value;
+                            const targetField = sourceNode.data.config?.targetField;
 
                             console.log(
                                 `[executeNodeWithDependencies] Source ${sourceNode.id} output:`,
@@ -2109,20 +1835,14 @@ export const useWorkflowRunner = (
                     );
 
                     // Execute with the computed input values
-                    const result = await executeNodeWithInputs(
-                        node,
-                        inputValues,
-                    );
+                    const result = await executeNodeWithInputs(node, inputValues);
 
                     // Store output in our synchronous map
                     nodeOutputs.set(node.id, result.output);
 
                     if (result.finished) {
                         updateNodeStatus(node.id, "success");
-                        console.log(
-                            "[Runner] Branch completed at end node:",
-                            node.id,
-                        );
+                        console.log("[Runner] Branch completed at end node:", node.id);
                         return { finished: true };
                     }
 
@@ -2144,14 +1864,7 @@ export const useWorkflowRunner = (
             }
             return nodeOutputs.get(node.id);
         },
-        [
-            nodes,
-            edges,
-            executeNodeWithInputs,
-            updateNodeStatus,
-            setCurrentNodeId,
-            setExecutionPath,
-        ],
+        [nodes, edges, executeNodeWithInputs, updateNodeStatus, setCurrentNodeId, setExecutionPath],
     );
 
     // Run the entire workflow
@@ -2196,10 +1909,7 @@ export const useWorkflowRunner = (
 
                 try {
                     // For non-start nodes, ensure input dependencies are executed first
-                    if (
-                        node.data.type !== "start" &&
-                        !executedNodes.has(node.id)
-                    ) {
+                    if (node.data.type !== "start" && !executedNodes.has(node.id)) {
                         await executeNodeWithDependencies(
                             node,
                             visited,
@@ -2217,10 +1927,7 @@ export const useWorkflowRunner = (
 
                         if (result.finished) {
                             updateNodeStatus(node.id, "success");
-                            console.log(
-                                "[Runner] Branch completed at end node:",
-                                node.id,
-                            );
+                            console.log("[Runner] Branch completed at end node:", node.id);
                             continue;
                         }
 
@@ -2252,9 +1959,7 @@ export const useWorkflowRunner = (
                         const nextNode = nodes.find((n) => n.id === nodeId);
                         console.log(
                             `[Runner] Checking nextNode ${nodeId}:`,
-                            nextNode
-                                ? `found (visited: ${visited.has(nextNode.id)})`
-                                : "NOT FOUND",
+                            nextNode ? `found (visited: ${visited.has(nextNode.id)})` : "NOT FOUND",
                         );
                         if (nextNode && !visited.has(nextNode.id)) {
                             queue.push({ node: nextNode, fromEdge: edge });

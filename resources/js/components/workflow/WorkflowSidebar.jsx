@@ -190,11 +190,7 @@ const nodeIcons = {
 };
 
 const DragHandle = () => (
-    <svg
-        className="w-4 h-4 text-gray-400"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-    >
+    <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
         <circle cx="9" cy="6" r="1.5" />
         <circle cx="15" cy="6" r="1.5" />
         <circle cx="9" cy="12" r="1.5" />
@@ -222,9 +218,7 @@ const WorkflowSidebar = ({ onDragStart }) => {
                         <rect x="14" y="14" width="7" height="7" />
                         <rect x="3" y="14" width="7" height="7" />
                     </svg>
-                    <h3 className="font-semibold text-gray-900 dark:text-white">
-                        Workflow Editor
-                    </h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Workflow Editor</h3>
                 </div>
             </div>
 
@@ -239,9 +233,7 @@ const WorkflowSidebar = ({ onDragStart }) => {
                         onDragStart={(e) => onDragStart(e, key)}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-grab active:cursor-grabbing hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
                     >
-                        <span className="text-gray-600 dark:text-gray-400">
-                            {nodeIcons[key]}
-                        </span>
+                        <span className="text-gray-600 dark:text-gray-400">{nodeIcons[key]}</span>
                         <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                             {label}
                         </span>

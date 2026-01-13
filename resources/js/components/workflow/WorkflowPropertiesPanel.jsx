@@ -63,8 +63,7 @@ const WorkflowPropertiesPanel = ({
                             Type
                         </label>
                         <div className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded text-sm text-gray-900 dark:text-white">
-                            {nodeTypeConfig[selectedNode.data.type]?.label ||
-                                "Unknown"}
+                            {nodeTypeConfig[selectedNode.data.type]?.label || "Unknown"}
                         </div>
                     </div>
 
@@ -114,9 +113,7 @@ const WorkflowPropertiesPanel = ({
                                     <ConstantNodeConfig
                                         config={parsedConfig}
                                         onChange={configChangeHandler}
-                                        connectedNodeTypes={getConnectedNodeTypes(
-                                            selectedNode.id,
-                                        )}
+                                        connectedNodeTypes={getConnectedNodeTypes(selectedNode.id)}
                                         nodes={nodes}
                                         currentNodeId={selectedNode.id}
                                     />
@@ -130,8 +127,7 @@ const WorkflowPropertiesPanel = ({
                                                 🌐 API Action Configuration
                                             </h5>
                                             <p className="text-xs text-blue-600 dark:text-blue-500">
-                                                Configure HTTP API requests to
-                                                external services
+                                                Configure HTTP API requests to external services
                                             </p>
                                         </div>
                                         <ApiCallConfig
@@ -152,8 +148,8 @@ const WorkflowPropertiesPanel = ({
                                                 📧 Email Action Configuration
                                             </h5>
                                             <p className="text-xs text-pink-600 dark:text-pink-500">
-                                                Send emails using templates from
-                                                Filament admin panel
+                                                Send emails using templates from Filament admin
+                                                panel
                                             </p>
                                         </div>
                                         <EmailActionConfig
@@ -171,8 +167,7 @@ const WorkflowPropertiesPanel = ({
                                                 🗄️ Database Action Configuration
                                             </h5>
                                             <p className="text-xs text-purple-600 dark:text-purple-500">
-                                                Execute database queries
-                                                directly from the workflow
+                                                Execute database queries directly from the workflow
                                             </p>
                                         </div>
                                         <DatabaseConfig
@@ -190,14 +185,12 @@ const WorkflowPropertiesPanel = ({
                                                 ⚡ Script Action Configuration
                                             </h5>
                                             <p className="text-xs text-amber-600 dark:text-amber-500">
-                                                Execute custom PHP or JavaScript
-                                                code
+                                                Execute custom PHP or JavaScript code
                                             </p>
                                         </div>
                                         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded p-3">
                                             <p className="text-sm text-amber-800 dark:text-amber-400">
-                                                🚧 Script execution
-                                                configuration coming soon...
+                                                🚧 Script execution configuration coming soon...
                                             </p>
                                         </div>
                                     </div>
@@ -211,14 +204,12 @@ const WorkflowPropertiesPanel = ({
                                                 🔔 Webhook Action Configuration
                                             </h5>
                                             <p className="text-xs text-green-600 dark:text-green-500">
-                                                Trigger external webhooks with
-                                                custom payloads
+                                                Trigger external webhooks with custom payloads
                                             </p>
                                         </div>
                                         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded p-3">
                                             <p className="text-sm text-green-800 dark:text-green-400">
-                                                🚧 Webhook configuration coming
-                                                soon...
+                                                🚧 Webhook configuration coming soon...
                                             </p>
                                         </div>
                                     </div>
@@ -232,8 +223,8 @@ const WorkflowPropertiesPanel = ({
                                                 📅 Google Calendar Configuration
                                             </h5>
                                             <p className="text-xs text-blue-600 dark:text-blue-500">
-                                                Create, update, list, or delete
-                                                Google Calendar events
+                                                Create, update, list, or delete Google Calendar
+                                                events
                                             </p>
                                         </div>
                                         <GoogleCalendarConfig
@@ -255,8 +246,7 @@ const WorkflowPropertiesPanel = ({
                                                 📄 Google Docs Configuration
                                             </h5>
                                             <p className="text-xs text-blue-600 dark:text-blue-500">
-                                                Create, read, update, or list
-                                                Google Documents
+                                                Create, read, update, or list Google Documents
                                             </p>
                                         </div>
                                         <GoogleDocsConfig
@@ -275,19 +265,11 @@ const WorkflowPropertiesPanel = ({
                                     <MergeNodeConfig
                                         config={parsedConfig}
                                         onChange={configChangeHandler}
-                                        inputs={
-                                            selectedNode.data?.inputs || [
-                                                "input-1",
-                                                "input-2",
-                                            ]
-                                        }
+                                        inputs={selectedNode.data?.inputs || ["input-1", "input-2"]}
                                         onInputsChange={(newInputs) => {
                                             // Update the node's inputs in parent state
                                             if (onUpdateNodeInputs) {
-                                                onUpdateNodeInputs(
-                                                    selectedNode.id,
-                                                    newInputs,
-                                                );
+                                                onUpdateNodeInputs(selectedNode.id, newInputs);
                                             }
                                         }}
                                     />
@@ -298,24 +280,14 @@ const WorkflowPropertiesPanel = ({
                                     <TemplateNodeConfig
                                         config={parsedConfig}
                                         onChange={configChangeHandler}
-                                        inputs={
-                                            selectedNode.data?.inputs || [
-                                                "input-1",
-                                                "input-2",
-                                            ]
-                                        }
+                                        inputs={selectedNode.data?.inputs || ["input-1", "input-2"]}
                                         onInputsChange={(newInputs) => {
                                             // Update the node's inputs in parent state
                                             if (onUpdateNodeInputs) {
-                                                onUpdateNodeInputs(
-                                                    selectedNode.id,
-                                                    newInputs,
-                                                );
+                                                onUpdateNodeInputs(selectedNode.id, newInputs);
                                             }
                                         }}
-                                        connectedNodeTypes={getConnectedNodeTypes(
-                                            selectedNode.id,
-                                        )}
+                                        connectedNodeTypes={getConnectedNodeTypes(selectedNode.id)}
                                     />
                                 );
 
@@ -327,8 +299,7 @@ const WorkflowPropertiesPanel = ({
                                                 Condition Configuration
                                             </h5>
                                             <p className="text-xs text-amber-600 dark:text-amber-500">
-                                                Compare two inputs and route to
-                                                TRUE or FALSE output
+                                                Compare two inputs and route to TRUE or FALSE output
                                             </p>
                                         </div>
                                         <ConditionConfig
@@ -349,9 +320,7 @@ const WorkflowPropertiesPanel = ({
                                         </label>
                                         <textarea
                                             value={nodeConfig}
-                                            onChange={(e) =>
-                                                setNodeConfig(e.target.value)
-                                            }
+                                            onChange={(e) => setNodeConfig(e.target.value)}
                                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                             placeholder='{"key": "value"}'
                                             rows="6"
@@ -463,8 +432,8 @@ const WorkflowPropertiesPanel = ({
 
                     <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded p-2">
                         <p className="text-xs text-blue-800 dark:text-blue-300">
-                            Click on another connection to delete it, or click
-                            on a node to edit its properties.
+                            Click on another connection to delete it, or click on a node to edit its
+                            properties.
                         </p>
                     </div>
                 </div>

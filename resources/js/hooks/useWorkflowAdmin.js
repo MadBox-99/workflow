@@ -61,9 +61,7 @@ export const useWorkflowAdmin = (toast = null) => {
                 return;
             }
             try {
-                const response = await axios.get(
-                    `/api/schedule-options?team_id=${forTeamId}`,
-                );
+                const response = await axios.get(`/api/schedule-options?team_id=${forTeamId}`);
                 setScheduleOptions(response.data);
                 // Set default cron if available and current is not in options
                 if (response.data.length > 0) {
@@ -86,9 +84,7 @@ export const useWorkflowAdmin = (toast = null) => {
         async (workflowId) => {
             try {
                 setLoading(true);
-                const response = await axios.get(
-                    `/api/workflows/${workflowId}`,
-                );
+                const response = await axios.get(`/api/workflows/${workflowId}`);
                 const workflow = response.data;
                 setSelectedWorkflow(workflow);
                 setWorkflowName(workflow.name);
@@ -102,8 +98,7 @@ export const useWorkflowAdmin = (toast = null) => {
                 notify(
                     "error",
                     "Error",
-                    "Failed to load workflow: " +
-                        (error.response?.data?.message || error.message),
+                    "Failed to load workflow: " + (error.response?.data?.message || error.message),
                 );
             } finally {
                 setLoading(false);
@@ -158,32 +153,20 @@ export const useWorkflowAdmin = (toast = null) => {
                 };
 
                 if (selectedWorkflow) {
-                    await axios.put(
-                        `/api/workflows/${selectedWorkflow.id}`,
-                        payload,
-                    );
+                    await axios.put(`/api/workflows/${selectedWorkflow.id}`, payload);
                     notify("success", "Saved", "Workflow updated successfully");
                     const updatedWorkflow = await axios.get(
                         `/api/workflows/${selectedWorkflow.id}`,
                     );
                     setSelectedWorkflow(updatedWorkflow.data);
                 } else {
-                    const response = await axios.post(
-                        "/api/workflows",
-                        payload,
-                    );
-                    notify(
-                        "success",
-                        "Created",
-                        "Workflow created successfully",
-                    );
+                    const response = await axios.post("/api/workflows", payload);
+                    notify("success", "Created", "Workflow created successfully");
                     setSelectedWorkflow(response.data);
                     setWorkflowName(response.data.name);
                     setWorkflowDescription(response.data.description || "");
                     setIsScheduled(response.data.is_scheduled || false);
-                    setScheduleCron(
-                        response.data.schedule_cron || "*/5 * * * *",
-                    );
+                    setScheduleCron(response.data.schedule_cron || "*/5 * * * *");
                 }
 
                 fetchWorkflows();
@@ -192,8 +175,7 @@ export const useWorkflowAdmin = (toast = null) => {
                 notify(
                     "error",
                     "Error",
-                    "Failed to save workflow: " +
-                        (error.response?.data?.message || error.message),
+                    "Failed to save workflow: " + (error.response?.data?.message || error.message),
                 );
             } finally {
                 setLoading(false);
@@ -222,8 +204,7 @@ export const useWorkflowAdmin = (toast = null) => {
 
     const handleDeleteWorkflow = useCallback(
         async (id) => {
-            if (!confirm("Are you sure you want to delete this workflow?"))
-                return;
+            if (!confirm("Are you sure you want to delete this workflow?")) return;
 
             try {
                 setLoading(true);

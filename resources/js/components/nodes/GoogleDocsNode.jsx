@@ -228,12 +228,10 @@ const GoogleDocsNode = ({ data, selected, id }) => {
                                     }}
                                     title="Run"
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.background =
-                                            "#2563eb";
+                                        e.currentTarget.style.background = "#2563eb";
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.background =
-                                            "#3b82f6";
+                                        e.currentTarget.style.background = "#3b82f6";
                                     }}
                                 >
                                     <svg
@@ -263,17 +261,15 @@ const GoogleDocsNode = ({ data, selected, id }) => {
                                     }}
                                     title="Delete"
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.background =
-                                            "#fee2e2";
-                                        e.currentTarget.style.borderColor =
-                                            "#ef4444";
+                                        e.currentTarget.style.background = "#fee2e2";
+                                        e.currentTarget.style.borderColor = "#ef4444";
                                         e.currentTarget.style.color = "#ef4444";
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.background =
-                                            "transparent";
-                                        e.currentTarget.style.borderColor =
-                                            isDark ? "#4b5563" : "#d1d5db";
+                                        e.currentTarget.style.background = "transparent";
+                                        e.currentTarget.style.borderColor = isDark
+                                            ? "#4b5563"
+                                            : "#d1d5db";
                                         e.currentTarget.style.color = isDark
                                             ? "#9ca3af"
                                             : "#374151";

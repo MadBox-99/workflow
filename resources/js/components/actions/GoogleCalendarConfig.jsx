@@ -44,10 +44,8 @@ const DynamicField = ({
     const safeValue = value ?? "";
 
     // Parse sourcePath which can be either a string (old format) or { nodeId, path } (new format)
-    const sourceNodeId =
-        typeof sourcePath === "object" ? sourcePath?.nodeId : null;
-    const sourcePathValue =
-        typeof sourcePath === "object" ? sourcePath?.path : sourcePath;
+    const sourceNodeId = typeof sourcePath === "object" ? sourcePath?.nodeId : null;
+    const sourcePathValue = typeof sourcePath === "object" ? sourcePath?.path : sourcePath;
 
     // Check if current value matches any available input
     const selectedInput = availableInputs.find(
@@ -56,12 +54,7 @@ const DynamicField = ({
 
     // Auto-select if there's exactly one available input and no value is set
     React.useEffect(() => {
-        if (
-            isDynamic &&
-            availableInputs.length === 1 &&
-            !safeValue &&
-            !hasAutoSelected.current
-        ) {
+        if (isDynamic && availableInputs.length === 1 && !safeValue && !hasAutoSelected.current) {
             hasAutoSelected.current = true;
             onChange(`{{{input.${availableInputs[0].targetField}}}}`);
         }
@@ -75,22 +68,15 @@ const DynamicField = ({
     const hasMatchingInput = availableInputs.length > 0;
 
     // Check if there's an action output connected (API, Calendar, etc.)
-    const hasActionOutput = availableInputs.some(
-        (input) => input.isActionOutput,
-    );
+    const hasActionOutput = availableInputs.some((input) => input.isActionOutput);
 
     // Get the currently selected source node (or first action output if none selected)
     const selectedSourceNode = useMemo(() => {
         if (sourceNodeId) {
-            return availableInputs.find(
-                (input) => input.nodeId === sourceNodeId,
-            );
+            return availableInputs.find((input) => input.nodeId === sourceNodeId);
         }
         // Default to first action output if no source selected
-        return (
-            availableInputs.find((input) => input.isActionOutput) ||
-            availableInputs[0]
-        );
+        return availableInputs.find((input) => input.isActionOutput) || availableInputs[0];
     }, [sourceNodeId, availableInputs]);
 
     // Get discovered paths and response mappings from the selected source node
@@ -195,18 +181,14 @@ const DynamicField = ({
                                     <div className="flex flex-wrap gap-1.5">
                                         {availableInputs.map((input) => {
                                             const isSelected =
-                                                selectedSourceNode?.nodeId ===
-                                                input.nodeId;
-                                            const isAction =
-                                                input.isActionOutput;
+                                                selectedSourceNode?.nodeId === input.nodeId;
+                                            const isAction = input.isActionOutput;
                                             return (
                                                 <button
                                                     key={input.nodeId}
                                                     type="button"
                                                     onClick={() =>
-                                                        handleSourceNodeChange(
-                                                            input.nodeId,
-                                                        )
+                                                        handleSourceNodeChange(input.nodeId)
                                                     }
                                                     className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg border transition-all ${
                                                         isSelected
@@ -259,11 +241,7 @@ const DynamicField = ({
                                                         {input.nodeLabel}
                                                     </span>
                                                     <span className="opacity-70">
-                                                        (
-                                                        {getNodeTypeLabel(
-                                                            input.nodeType,
-                                                        )}
-                                                        )
+                                                        ({getNodeTypeLabel(input.nodeType)})
                                                     </span>
                                                 </button>
                                             );
@@ -302,10 +280,7 @@ const DynamicField = ({
                                     <span
                                         className={`text-sm ${hasActionOutput ? "text-blue-700 dark:text-blue-300" : "text-purple-700 dark:text-purple-300"}`}
                                     >
-                                        From:{" "}
-                                        <strong>
-                                            {availableInputs[0].nodeLabel}
-                                        </strong>
+                                        From: <strong>{availableInputs[0].nodeLabel}</strong>
                                     </span>
                                 </div>
                             )}
@@ -322,78 +297,63 @@ const DynamicField = ({
                                                     : "Select value:"}
                                             </p>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {selectablePaths.map(
-                                                    (pathItem, idx) => {
-                                                        const isSelected =
-                                                            sourcePathValue ===
-                                                            pathItem.path;
-                                                        return (
-                                                            <button
-                                                                key={idx}
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handlePathChange(
-                                                                        pathItem.path,
-                                                                    )
-                                                                }
-                                                                className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border transition-all hover:scale-105 ${
-                                                                    isSelected
-                                                                        ? "bg-blue-500 border-blue-600 text-white ring-2 ring-blue-300 dark:ring-blue-700"
-                                                                        : pathItem.type ===
-                                                                            "mapped"
-                                                                          ? "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:border-purple-700 dark:text-purple-400"
+                                                {selectablePaths.map((pathItem, idx) => {
+                                                    const isSelected =
+                                                        sourcePathValue === pathItem.path;
+                                                    return (
+                                                        <button
+                                                            key={idx}
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handlePathChange(pathItem.path)
+                                                            }
+                                                            className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border transition-all hover:scale-105 ${
+                                                                isSelected
+                                                                    ? "bg-blue-500 border-blue-600 text-white ring-2 ring-blue-300 dark:ring-blue-700"
+                                                                    : pathItem.type === "mapped"
+                                                                      ? "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:border-purple-700 dark:text-purple-400"
+                                                                      : pathItem.type === "constant"
+                                                                        ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/20 dark:border-orange-700 dark:text-orange-400"
+                                                                        : pathItem.type === "string"
+                                                                          ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-700 dark:text-green-400"
                                                                           : pathItem.type ===
-                                                                              "constant"
-                                                                            ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/20 dark:border-orange-700 dark:text-orange-400"
-                                                                            : pathItem.type ===
-                                                                                "string"
-                                                                              ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-700 dark:text-green-400"
-                                                                              : pathItem.type ===
-                                                                                  "number"
-                                                                                ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-400"
-                                                                                : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400"
-                                                                }`}
-                                                                title={
-                                                                    pathItem.preview
-                                                                }
-                                                            >
-                                                                {isSelected && (
-                                                                    <svg
-                                                                        className="w-3 h-3"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        viewBox="0 0 24 24"
-                                                                    >
-                                                                        <path
-                                                                            strokeLinecap="round"
-                                                                            strokeLinejoin="round"
-                                                                            strokeWidth="2"
-                                                                            d="M5 13l4 4L19 7"
-                                                                        />
-                                                                    </svg>
-                                                                )}
-                                                                <span className="font-mono">
-                                                                    {pathItem
-                                                                        .displayPath
-                                                                        .length >
-                                                                    18
-                                                                        ? "..." +
-                                                                          pathItem.displayPath.slice(
-                                                                              -16,
-                                                                          )
-                                                                        : pathItem.displayPath}
-                                                                </span>
-                                                            </button>
-                                                        );
-                                                    },
-                                                )}
+                                                                              "number"
+                                                                            ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-400"
+                                                                            : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400"
+                                                            }`}
+                                                            title={pathItem.preview}
+                                                        >
+                                                            {isSelected && (
+                                                                <svg
+                                                                    className="w-3 h-3"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth="2"
+                                                                        d="M5 13l4 4L19 7"
+                                                                    />
+                                                                </svg>
+                                                            )}
+                                                            <span className="font-mono">
+                                                                {pathItem.displayPath.length > 18
+                                                                    ? "..." +
+                                                                      pathItem.displayPath.slice(
+                                                                          -16,
+                                                                      )
+                                                                    : pathItem.displayPath}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
                                                 {/* Clear selection button */}
                                                 {sourcePathValue && (
                                                     <button
                                                         type="button"
-                                                        onClick={() =>
-                                                            handlePathChange("")
-                                                        }
+                                                        onClick={() => handlePathChange("")}
                                                         className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
                                                         title="Clear selection (auto-detect)"
                                                     >
@@ -418,19 +378,13 @@ const DynamicField = ({
                                             {selectedSourceNode.isActionOutput && (
                                                 <details className="mt-2">
                                                     <summary className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
-                                                        Or enter path
-                                                        manually...
+                                                        Or enter path manually...
                                                     </summary>
                                                     <input
                                                         type="text"
-                                                        value={
-                                                            sourcePathValue ||
-                                                            ""
-                                                        }
+                                                        value={sourcePathValue || ""}
                                                         onChange={(e) =>
-                                                            handlePathChange(
-                                                                e.target.value,
-                                                            )
+                                                            handlePathChange(e.target.value)
                                                         }
                                                         className="w-full mt-1.5 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                                         placeholder="e.g., data.items.0.name"
@@ -443,25 +397,19 @@ const DynamicField = ({
                                             <input
                                                 type="text"
                                                 value={sourcePathValue || ""}
-                                                onChange={(e) =>
-                                                    handlePathChange(
-                                                        e.target.value,
-                                                    )
-                                                }
+                                                onChange={(e) => handlePathChange(e.target.value)}
                                                 className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                                 placeholder="e.g., _mapped.title or data.name"
                                             />
                                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                Run "Test Request" on the API
-                                                node to see available fields
+                                                Run "Test Request" on the API node to see available
+                                                fields
                                             </p>
                                         </div>
                                     ) : (
                                         <div className="p-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded text-xs text-orange-700 dark:text-orange-400">
                                             Using value from constant node:{" "}
-                                            <strong>
-                                                {selectedSourceNode.nodeLabel}
-                                            </strong>
+                                            <strong>{selectedSourceNode.nodeLabel}</strong>
                                         </div>
                                     )}
                                 </div>
@@ -469,8 +417,8 @@ const DynamicField = ({
                         </>
                     ) : (
                         <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded text-xs text-yellow-700 dark:text-yellow-400">
-                            No connected input node. Connect an API, Constant,
-                            or other action node to use dynamic values.
+                            No connected input node. Connect an API, Constant, or other action node
+                            to use dynamic values.
                         </div>
                     )}
                 </div>
@@ -514,14 +462,7 @@ const TARGET_FIELD_LABELS = {
     eventId: "Event ID",
 };
 
-const GoogleCalendarConfig = ({
-    config,
-    onChange,
-    teamId,
-    nodeId,
-    nodes = [],
-    edges = [],
-}) => {
+const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], edges = [] }) => {
     // Find connected nodes that can provide input (Constant nodes with targetField, or action nodes with output)
     const availableInputs = useMemo(() => {
         if (!nodeId || !edges.length || !nodes.length) return [];
@@ -547,8 +488,7 @@ const GoogleCalendarConfig = ({
                         nodeLabel: sourceNode.data?.label || "Constant",
                         nodeType: "constant",
                         targetField: targetField,
-                        targetFieldLabel:
-                            TARGET_FIELD_LABELS[targetField] || targetField,
+                        targetFieldLabel: TARGET_FIELD_LABELS[targetField] || targetField,
                     });
                 }
             }
@@ -557,8 +497,7 @@ const GoogleCalendarConfig = ({
             if (OUTPUT_NODE_TYPES.includes(nodeType)) {
                 inputs.push({
                     nodeId: sourceNode.id,
-                    nodeLabel:
-                        sourceNode.data?.label || getNodeTypeLabel(nodeType),
+                    nodeLabel: sourceNode.data?.label || getNodeTypeLabel(nodeType),
                     nodeType: nodeType,
                     targetField: "input", // Default field for action outputs
                     targetFieldLabel: getNodeTypeLabel(nodeType),
@@ -584,10 +523,7 @@ const GoogleCalendarConfig = ({
         // Find any source node that is a googleCalendarAction
         for (const edge of incomingEdges) {
             const sourceNode = nodes.find((n) => n.id === edge.source);
-            if (
-                sourceNode &&
-                sourceNode.data?.type === "googleCalendarAction"
-            ) {
+            if (sourceNode && sourceNode.data?.type === "googleCalendarAction") {
                 return {
                     nodeId: sourceNode.id,
                     nodeLabel: sourceNode.data?.label || "Google Calendar",
@@ -612,8 +548,7 @@ const GoogleCalendarConfig = ({
             ) {
                 return {
                     nodeId: sourceNode.id,
-                    nodeLabel:
-                        sourceNode.data?.label || "Delete Calendar Event",
+                    nodeLabel: sourceNode.data?.label || "Delete Calendar Event",
                 };
             }
         }
@@ -621,15 +556,11 @@ const GoogleCalendarConfig = ({
     }, [nodeId, nodes, edges]);
 
     const [operation, setOperation] = useState(config.operation || "create");
-    const [calendarId, setCalendarId] = useState(
-        config.calendarId || "primary",
-    );
+    const [calendarId, setCalendarId] = useState(config.calendarId || "primary");
     const [summary, setSummary] = useState(config.summary || "");
     const [description, setDescription] = useState(config.description || "");
     const [location, setLocation] = useState(config.location || "");
-    const [startDateTime, setStartDateTime] = useState(
-        config.startDateTime || "",
-    );
+    const [startDateTime, setStartDateTime] = useState(config.startDateTime || "");
     const [endDateTime, setEndDateTime] = useState(config.endDateTime || "");
     const [attendees, setAttendees] = useState(config.attendees || "");
     const [eventId, setEventId] = useState(config.eventId || "");
@@ -638,13 +569,9 @@ const GoogleCalendarConfig = ({
     const [maxResults, setMaxResults] = useState(config.maxResults || 10);
 
     // Dynamic field toggles
-    const [dynamicFields, setDynamicFields] = useState(
-        config.dynamicFields || {},
-    );
+    const [dynamicFields, setDynamicFields] = useState(config.dynamicFields || {});
     // Dynamic field source paths (for specifying which field to use from API response)
-    const [dynamicFieldPaths, setDynamicFieldPaths] = useState(
-        config.dynamicFieldPaths || {},
-    );
+    const [dynamicFieldPaths, setDynamicFieldPaths] = useState(config.dynamicFieldPaths || {});
 
     const [calendars, setCalendars] = useState([]);
     const [events, setEvents] = useState([]);
@@ -672,9 +599,7 @@ const GoogleCalendarConfig = ({
         setMaxResults(config.maxResults || 10);
         setDynamicFields(config.dynamicFields || {});
         setDynamicFieldPaths(config.dynamicFieldPaths || {});
-        setEventIdMode(
-            config.eventIdMode || (connectedCalendarNode ? "dynamic" : "list"),
-        );
+        setEventIdMode(config.eventIdMode || (connectedCalendarNode ? "dynamic" : "list"));
     }, [config, connectedCalendarNode]);
 
     // Helper to toggle dynamic state for a field
@@ -703,10 +628,7 @@ const GoogleCalendarConfig = ({
                     // Refresh connection status after successful OAuth
                     checkConnectionStatus();
                 } else {
-                    alert(
-                        event.data.message ||
-                            "Failed to connect Google Calendar",
-                    );
+                    alert(event.data.message || "Failed to connect Google Calendar");
                 }
             }
         };
@@ -760,9 +682,7 @@ const GoogleCalendarConfig = ({
     const checkConnectionStatus = async () => {
         try {
             setLoading(true);
-            const response = await fetch(
-                `/api/google/auth/status?team_id=${teamId}`,
-            );
+            const response = await fetch(`/api/google/auth/status?team_id=${teamId}`);
             if (response.ok) {
                 const data = await response.json();
                 setConnectionStatus(data);
@@ -776,9 +696,7 @@ const GoogleCalendarConfig = ({
 
     const fetchCalendars = async () => {
         try {
-            const response = await fetch(
-                `/api/google/calendars?team_id=${teamId}`,
-            );
+            const response = await fetch(`/api/google/calendars?team_id=${teamId}`);
             if (response.ok) {
                 const data = await response.json();
                 setCalendars(data);
@@ -819,19 +737,14 @@ const GoogleCalendarConfig = ({
 
     // Fetch events when calendar changes and operation needs events
     useEffect(() => {
-        if (
-            (operation === "update" || operation === "delete") &&
-            connectionStatus?.connected
-        ) {
+        if ((operation === "update" || operation === "delete") && connectionStatus?.connected) {
             fetchEvents();
         }
     }, [calendarId, operation, connectionStatus?.connected]);
 
     const handleConnect = async () => {
         try {
-            const response = await fetch(
-                `/api/google/auth/redirect?team_id=${teamId}`,
-            );
+            const response = await fetch(`/api/google/auth/redirect?team_id=${teamId}`);
             if (response.ok) {
                 const data = await response.json();
                 setConnectingUrl(data.auth_url);
@@ -878,8 +791,7 @@ const GoogleCalendarConfig = ({
         return (
             <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded">
                 <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                    Please save the workflow first to enable Google Calendar
-                    configuration.
+                    Please save the workflow first to enable Google Calendar configuration.
                 </p>
             </div>
         );
@@ -923,8 +835,8 @@ const GoogleCalendarConfig = ({
                         </div>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Connect your Google Calendar to create, update, and
-                        manage events directly from your workflows.
+                        Connect your Google Calendar to create, update, and manage events directly
+                        from your workflows.
                     </p>
                     <button
                         onClick={handleConnect}
@@ -1010,36 +922,34 @@ const GoogleCalendarConfig = ({
             </div>
 
             {/* Warning when Delete node is connected to Update/Delete operations */}
-            {connectedDeleteNode &&
-                (operation === "update" || operation === "delete") && (
-                    <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded">
-                        <div className="flex items-start gap-2">
-                            <svg
-                                className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                                />
-                            </svg>
-                            <div>
-                                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                                    Delete node csatlakoztatva
-                                </p>
-                                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                                    A "{connectedDeleteNode.nodeLabel}" node
-                                    törli az eseményt. A törölt esemény ID-ja
-                                    nem használható további műveletekhez.
-                                </p>
-                            </div>
+            {connectedDeleteNode && (operation === "update" || operation === "delete") && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded">
+                    <div className="flex items-start gap-2">
+                        <svg
+                            className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                            />
+                        </svg>
+                        <div>
+                            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                                Delete node csatlakoztatva
+                            </p>
+                            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                                A "{connectedDeleteNode.nodeLabel}" node törli az eseményt. A törölt
+                                esemény ID-ja nem használható további műveletekhez.
+                            </p>
                         </div>
                     </div>
-                )}
+                </div>
+            )}
 
             <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
@@ -1132,19 +1042,16 @@ const GoogleCalendarConfig = ({
                                     </svg>
                                     <div>
                                         <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                                            Using ID from:{" "}
-                                            {connectedCalendarNode.nodeLabel}
+                                            Using ID from: {connectedCalendarNode.nodeLabel}
                                         </p>
                                         <p className="text-xs text-purple-600 dark:text-purple-400">
-                                            Operation:{" "}
-                                            {connectedCalendarNode.operation}
+                                            Operation: {connectedCalendarNode.operation}
                                         </p>
                                     </div>
                                 </div>
                             ) : (
                                 <p className="text-sm text-purple-700 dark:text-purple-400">
-                                    Connect a Calendar node to use its output
-                                    event ID.
+                                    Connect a Calendar node to use its output event ID.
                                 </p>
                             )}
                         </div>
@@ -1161,17 +1068,13 @@ const GoogleCalendarConfig = ({
                                     disabled={eventsLoading}
                                 >
                                     <option value="">
-                                        {eventsLoading
-                                            ? "Loading events..."
-                                            : "Select an event"}
+                                        {eventsLoading ? "Loading events..." : "Select an event"}
                                     </option>
                                     {events.map((event) => (
                                         <option key={event.id} value={event.id}>
                                             {event.summary || "(No title)"} -{" "}
                                             {event.start
-                                                ? new Date(
-                                                      event.start,
-                                                  ).toLocaleDateString(
+                                                ? new Date(event.start).toLocaleDateString(
                                                       "hu-HU",
                                                       {
                                                           month: "short",
@@ -1276,8 +1179,7 @@ const GoogleCalendarConfig = ({
                             <ul className="text-xs text-green-600 dark:text-green-500 space-y-0.5">
                                 {availableInputs.map((input) => (
                                     <li key={input.nodeId}>
-                                        {input.nodeLabel} →{" "}
-                                        {input.targetFieldLabel}
+                                        {input.nodeLabel} → {input.targetFieldLabel}
                                     </li>
                                 ))}
                             </ul>
@@ -1293,13 +1195,10 @@ const GoogleCalendarConfig = ({
                         isDynamic={dynamicFields.summary}
                         onDynamicChange={(v) => toggleDynamic("summary", v)}
                         availableInputs={availableInputs.filter(
-                            (i) =>
-                                i.targetField === "summary" || i.isActionOutput,
+                            (i) => i.targetField === "summary" || i.isActionOutput,
                         )}
                         sourcePath={dynamicFieldPaths.summary}
-                        onSourcePathChange={(path) =>
-                            updateFieldPath("summary", path)
-                        }
+                        onSourcePathChange={(path) => updateFieldPath("summary", path)}
                     />
 
                     <DynamicField
@@ -1311,14 +1210,10 @@ const GoogleCalendarConfig = ({
                         isDynamic={dynamicFields.description}
                         onDynamicChange={(v) => toggleDynamic("description", v)}
                         availableInputs={availableInputs.filter(
-                            (i) =>
-                                i.targetField === "description" ||
-                                i.isActionOutput,
+                            (i) => i.targetField === "description" || i.isActionOutput,
                         )}
                         sourcePath={dynamicFieldPaths.description}
-                        onSourcePathChange={(path) =>
-                            updateFieldPath("description", path)
-                        }
+                        onSourcePathChange={(path) => updateFieldPath("description", path)}
                     />
 
                     <DynamicField
@@ -1330,14 +1225,10 @@ const GoogleCalendarConfig = ({
                         isDynamic={dynamicFields.location}
                         onDynamicChange={(v) => toggleDynamic("location", v)}
                         availableInputs={availableInputs.filter(
-                            (i) =>
-                                i.targetField === "location" ||
-                                i.isActionOutput,
+                            (i) => i.targetField === "location" || i.isActionOutput,
                         )}
                         sourcePath={dynamicFieldPaths.location}
-                        onSourcePathChange={(path) =>
-                            updateFieldPath("location", path)
-                        }
+                        onSourcePathChange={(path) => updateFieldPath("location", path)}
                     />
 
                     <div className="grid grid-cols-2 gap-3">
@@ -1347,18 +1238,12 @@ const GoogleCalendarConfig = ({
                             onChange={setStartDateTime}
                             type="datetime"
                             isDynamic={dynamicFields.startDateTime}
-                            onDynamicChange={(v) =>
-                                toggleDynamic("startDateTime", v)
-                            }
+                            onDynamicChange={(v) => toggleDynamic("startDateTime", v)}
                             availableInputs={availableInputs.filter(
-                                (i) =>
-                                    i.targetField === "startDateTime" ||
-                                    i.isActionOutput,
+                                (i) => i.targetField === "startDateTime" || i.isActionOutput,
                             )}
                             sourcePath={dynamicFieldPaths.startDateTime}
-                            onSourcePathChange={(path) =>
-                                updateFieldPath("startDateTime", path)
-                            }
+                            onSourcePathChange={(path) => updateFieldPath("startDateTime", path)}
                         />
                         <DynamicField
                             label="End Date/Time"
@@ -1366,18 +1251,12 @@ const GoogleCalendarConfig = ({
                             onChange={setEndDateTime}
                             type="datetime"
                             isDynamic={dynamicFields.endDateTime}
-                            onDynamicChange={(v) =>
-                                toggleDynamic("endDateTime", v)
-                            }
+                            onDynamicChange={(v) => toggleDynamic("endDateTime", v)}
                             availableInputs={availableInputs.filter(
-                                (i) =>
-                                    i.targetField === "endDateTime" ||
-                                    i.isActionOutput,
+                                (i) => i.targetField === "endDateTime" || i.isActionOutput,
                             )}
                             sourcePath={dynamicFieldPaths.endDateTime}
-                            onSourcePathChange={(path) =>
-                                updateFieldPath("endDateTime", path)
-                            }
+                            onSourcePathChange={(path) => updateFieldPath("endDateTime", path)}
                         />
                     </div>
 
@@ -1390,14 +1269,10 @@ const GoogleCalendarConfig = ({
                         isDynamic={dynamicFields.attendees}
                         onDynamicChange={(v) => toggleDynamic("attendees", v)}
                         availableInputs={availableInputs.filter(
-                            (i) =>
-                                i.targetField === "attendees" ||
-                                i.isActionOutput,
+                            (i) => i.targetField === "attendees" || i.isActionOutput,
                         )}
                         sourcePath={dynamicFieldPaths.attendees}
-                        onSourcePathChange={(path) =>
-                            updateFieldPath("attendees", path)
-                        }
+                        onSourcePathChange={(path) => updateFieldPath("attendees", path)}
                     />
                 </>
             )}
@@ -1412,28 +1287,25 @@ const GoogleCalendarConfig = ({
                     </p>
                     <p>
                         <strong>Calendar:</strong>{" "}
-                        {calendars.find((c) => c.id === calendarId)?.summary ||
-                            calendarId}
+                        {calendars.find((c) => c.id === calendarId)?.summary || calendarId}
                     </p>
                     {operation === "create" && summary && (
                         <p>
                             <strong>Event:</strong> {summary}
                         </p>
                     )}
-                    {(operation === "update" || operation === "delete") &&
-                        eventId && (
-                            <p>
-                                <strong>Event ID:</strong> {eventId}
-                            </p>
-                        )}
+                    {(operation === "update" || operation === "delete") && eventId && (
+                        <p>
+                            <strong>Event ID:</strong> {eventId}
+                        </p>
+                    )}
                 </div>
             </div>
 
             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700">
                 <p className="text-xs text-blue-600 dark:text-blue-400">
-                    <strong>Tip:</strong> Connect Constant nodes and set their
-                    Target Field, then switch fields to Dynamic mode to use
-                    their values.
+                    <strong>Tip:</strong> Connect Constant nodes and set their Target Field, then
+                    switch fields to Dynamic mode to use their values.
                 </p>
             </div>
         </div>

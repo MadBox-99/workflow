@@ -1,10 +1,4 @@
-import React, {
-    useMemo,
-    useRef,
-    useEffect,
-    useState,
-    useCallback,
-} from "react";
+import React, { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { ReactFlow, Background, Panel, useReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -16,10 +10,7 @@ import { useWorkflowEditor } from "@/hooks/useWorkflowEditor";
 import { useWorkflowRunner } from "@/hooks/useWorkflowRunner";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useToast } from "@/components/ui/toast";
-import {
-    defaultEdgeOptions,
-    nodeTypeConfig,
-} from "@/constants/workflowConstants";
+import { defaultEdgeOptions, nodeTypeConfig } from "@/constants/workflowConstants";
 import { Button } from "@/components/ui/button";
 
 // Context Menu icons
@@ -107,8 +98,7 @@ const ContextMenu = ({ x, y, onClose, onAddNode }) => {
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
-        return () =>
-            document.removeEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [onClose]);
 
     const menuItems = [
@@ -142,9 +132,7 @@ const ContextMenu = ({ x, y, onClose, onAddNode }) => {
                     }}
                     className="flex items-center gap-3 w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
-                    <span className="text-gray-500 dark:text-gray-400">
-                        {icon}
-                    </span>
+                    <span className="text-gray-500 dark:text-gray-400">{icon}</span>
                     {label}
                 </button>
             ))}
@@ -267,12 +255,7 @@ const ZoomControls = ({ onSave, onReset, isSaving }) => {
     );
 };
 
-const WorkflowEditor = ({
-    initialNodes = [],
-    initialEdges = [],
-    onSave,
-    teamId,
-}) => {
+const WorkflowEditor = ({ initialNodes = [], initialEdges = [], onSave, teamId }) => {
     const reactFlowWrapper = useRef(null);
     const edgeTypes = useMemo(() => ({ floating: FloatingEdge }), []);
     const [isSaving, setIsSaving] = useState(false);

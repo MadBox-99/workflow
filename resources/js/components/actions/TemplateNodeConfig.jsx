@@ -1,22 +1,9 @@
-import React, {
-    useState,
-    useEffect,
-    useRef,
-    useCallback,
-    useMemo,
-} from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import RichTextEditor from "../ui/RichTextEditor";
 import { getFieldsForNodeTypes } from "@/constants/nodeInputFields";
 
 // Modal component for full-screen editing
-const TemplateEditorModal = ({
-    isOpen,
-    onClose,
-    value,
-    onChange,
-    availableNodes,
-    inputLabels,
-}) => {
+const TemplateEditorModal = ({ isOpen, onClose, value, onChange, availableNodes, inputLabels }) => {
     const [localValue, setLocalValue] = useState(value);
 
     useEffect(() => {
@@ -101,8 +88,8 @@ const TemplateEditorModal = ({
                             <kbd className="px-1.5 py-0.5 bg-sky-100 dark:bg-sky-800 rounded text-xs font-mono">
                                 @
                             </kbd>{" "}
-                            to insert input placeholders. Use the toolbar to
-                            format your text with bold, italic, lists, and more.
+                            to insert input placeholders. Use the toolbar to format your text with
+                            bold, italic, lists, and more.
                         </p>
                     </div>
 
@@ -120,9 +107,7 @@ const TemplateEditorModal = ({
                         </p>
                         <p className="text-sm text-gray-800 dark:text-gray-200">
                             {getPreviewText() || (
-                                <em className="text-gray-400">
-                                    No template defined
-                                </em>
+                                <em className="text-gray-400">No template defined</em>
                             )}
                         </p>
                     </div>
@@ -321,21 +306,14 @@ const TemplateNodeConfig = ({
                 </div>
                 <div className="space-y-2">
                     {normalizedInputs.map((input, i) => (
-                        <div
-                            key={`${input}-${i}`}
-                            className="flex items-center gap-2"
-                        >
+                        <div key={`${input}-${i}`} className="flex items-center gap-2">
                             <div className="w-20 text-xs font-mono text-gray-500 dark:text-gray-400 bg-sky-50 dark:bg-sky-900/30 px-1.5 py-0.5 rounded truncate">
-                                @
-                                {inputLabels[i]?.substring(0, 8) ||
-                                    `Input ${i + 1}`}
+                                @{inputLabels[i]?.substring(0, 8) || `Input ${i + 1}`}
                             </div>
                             <input
                                 type="text"
                                 value={inputLabels[i] || ""}
-                                onChange={(e) =>
-                                    handleLabelChange(i, e.target.value)
-                                }
+                                onChange={(e) => handleLabelChange(i, e.target.value)}
                                 placeholder={`Input ${i + 1} label`}
                                 className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             />
@@ -404,19 +382,15 @@ const TemplateNodeConfig = ({
                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                     Target Field{" "}
                     {!hasRelevantConnection && (
-                        <span className="text-xs text-gray-400">
-                            (connect to a node first)
-                        </span>
+                        <span className="text-xs text-gray-400">(connect to a node first)</span>
                     )}
                 </label>
                 {hasRelevantConnection ? (
                     <>
                         <div className="mb-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded text-xs text-green-700 dark:text-green-400">
                             Connected to:{" "}
-                            <strong>
-                                {availableFields.map((f) => f.label).join(", ")}
-                            </strong>{" "}
-                            - select which field to populate
+                            <strong>{availableFields.map((f) => f.label).join(", ")}</strong> -
+                            select which field to populate
                         </div>
                         <select
                             value={targetField}
@@ -425,15 +399,9 @@ const TemplateNodeConfig = ({
                         >
                             <option value="">-- Select target field --</option>
                             {availableFields.map((nodeConfig) => (
-                                <optgroup
-                                    key={nodeConfig.nodeType}
-                                    label={nodeConfig.label}
-                                >
+                                <optgroup key={nodeConfig.nodeType} label={nodeConfig.label}>
                                     {nodeConfig.fields.map((field) => (
-                                        <option
-                                            key={field.value}
-                                            value={field.value}
-                                        >
+                                        <option key={field.value} value={field.value}>
                                             {field.label}
                                         </option>
                                     ))}
@@ -443,8 +411,8 @@ const TemplateNodeConfig = ({
                     </>
                 ) : (
                     <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-500 dark:text-gray-400">
-                        Connect this node to an action (Calendar, Email, API,
-                        etc.) to see available target fields.
+                        Connect this node to an action (Calendar, Email, API, etc.) to see available
+                        target fields.
                     </div>
                 )}
             </div>
@@ -455,9 +423,7 @@ const TemplateNodeConfig = ({
                     Preview (with example values):
                 </p>
                 <p className="text-sm text-sky-800 dark:text-sky-400 break-all">
-                    {getPreviewText() || (
-                        <em className="text-gray-400">No template defined</em>
-                    )}
+                    {getPreviewText() || <em className="text-gray-400">No template defined</em>}
                 </p>
             </div>
 

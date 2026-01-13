@@ -65,11 +65,9 @@ const ToastItem = ({ toast, onRemove }) => {
     };
 
     const bgColors = {
-        success:
-            "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
+        success: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
         error: "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800",
-        warning:
-            "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800",
+        warning: "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800",
         info: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800",
     };
 
@@ -78,9 +76,7 @@ const ToastItem = ({ toast, onRemove }) => {
             className={`flex items-start gap-3 p-4 rounded-lg border shadow-lg backdrop-blur-sm animate-slide-in ${bgColors[toast.type] || bgColors.info}`}
             role="alert"
         >
-            <span className="flex-shrink-0 mt-0.5">
-                {icons[toast.type] || icons.info}
-            </span>
+            <span className="flex-shrink-0 mt-0.5">{icons[toast.type] || icons.info}</span>
             <div className="flex-1 min-w-0">
                 {toast.title && (
                     <p className="font-medium text-sm text-gray-900 dark:text-white">
@@ -115,35 +111,29 @@ const ToastItem = ({ toast, onRemove }) => {
 export const ToastProvider = ({ children }) => {
     const [toasts, setToasts] = useState([]);
 
-    const addToast = useCallback(
-        ({ type = "info", title, message, duration = 4000 }) => {
-            const id = Date.now() + Math.random();
-            const newToast = { id, type, title, message };
+    const addToast = useCallback(({ type = "info", title, message, duration = 4000 }) => {
+        const id = Date.now() + Math.random();
+        const newToast = { id, type, title, message };
 
-            setToasts((prev) => [...prev, newToast]);
+        setToasts((prev) => [...prev, newToast]);
 
-            if (duration > 0) {
-                setTimeout(() => {
-                    removeToast(id);
-                }, duration);
-            }
+        if (duration > 0) {
+            setTimeout(() => {
+                removeToast(id);
+            }, duration);
+        }
 
-            return id;
-        },
-        [],
-    );
+        return id;
+    }, []);
 
     const removeToast = useCallback((id) => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, []);
 
     const toast = {
-        success: (title, message) =>
-            addToast({ type: "success", title, message }),
-        error: (title, message) =>
-            addToast({ type: "error", title, message, duration: 6000 }),
-        warning: (title, message) =>
-            addToast({ type: "warning", title, message }),
+        success: (title, message) => addToast({ type: "success", title, message }),
+        error: (title, message) => addToast({ type: "error", title, message, duration: 6000 }),
+        warning: (title, message) => addToast({ type: "warning", title, message }),
         info: (title, message) => addToast({ type: "info", title, message }),
     };
 
