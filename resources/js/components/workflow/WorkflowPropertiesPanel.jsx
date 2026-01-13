@@ -9,6 +9,7 @@ import GoogleCalendarConfig from '../actions/GoogleCalendarConfig';
 import GoogleDocsConfig from '../actions/GoogleDocsConfig';
 import MergeNodeConfig from '../actions/MergeNodeConfig';
 import TemplateNodeConfig from '../actions/TemplateNodeConfig';
+import ConditionConfig from '../actions/ConditionConfig';
 
 const WorkflowPropertiesPanel = ({
     selectedNode,
@@ -272,6 +273,27 @@ const WorkflowPropertiesPanel = ({
                                         }}
                                         connectedNodeTypes={getConnectedNodeTypes(selectedNode.id)}
                                     />
+                                );
+
+                            case 'condition':
+                                return (
+                                    <div className="space-y-4">
+                                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded p-3">
+                                            <h5 className="font-semibold text-sm text-amber-800 dark:text-amber-400 mb-2">
+                                                Condition Configuration
+                                            </h5>
+                                            <p className="text-xs text-amber-600 dark:text-amber-500">
+                                                Compare two inputs and route to TRUE or FALSE output
+                                            </p>
+                                        </div>
+                                        <ConditionConfig
+                                            config={parsedConfig}
+                                            onChange={configChangeHandler}
+                                            nodeId={selectedNode.id}
+                                            nodes={nodes}
+                                            edges={edges}
+                                        />
+                                    </div>
                                 );
 
                             default:

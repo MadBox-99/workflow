@@ -409,8 +409,9 @@ class WorkflowRunnerService
     protected function executeConditionNode(array $config, array $inputValues): array
     {
         $operator = $config['operator'] ?? 'equals';
-        $a = $inputValues['valueA'] ?? $config['valueA'] ?? null;
-        $b = $inputValues['valueB'] ?? $config['valueB'] ?? null;
+        $passWhen = $config['passWhen'] ?? 'true';
+        $a = $inputValues['valueA'] ?? $config['defaultValueA'] ?? null;
+        $b = $inputValues['valueB'] ?? $config['defaultValueB'] ?? null;
 
         $result = match ($operator) {
             'equals' => $a == $b,
@@ -428,13 +429,16 @@ class WorkflowRunnerService
             default => false,
         };
 
-        $this->log('info', "Condition: {$a} {$operator} {$b} = ".($result ? 'true' : 'false'));
+        // Check if condition passes based on passWhen setting
+        $shouldPass = ($passWhen === 'true' && $result) || ($passWhen === 'false' && ! $result);
+
+        $this->log('info', "Condition: {$a} {$operator} {$b} = ".($result ? 'true' : 'false')." (passWhen: {$passWhen}, passed: ".($shouldPass ? 'yes' : 'no').')');
 
         return [
             'success' => true,
             'conditionResult' => $result,
-            'nextHandle' => $result ? 'true-source' : 'false-source',
-            'output' => $result,
+            'shouldContinue' => $shouldPass,
+            'output' => $shouldPass ? $a : null,
         ];
     }
 

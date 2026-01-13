@@ -307,8 +307,9 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
 
             case 'condition': {
                 const operator = config.operator || 'equals';
-                const a = inputValues.valueA ?? config.valueA;
-                const b = inputValues.valueB ?? config.valueB;
+                const passWhen = config.passWhen || 'true';
+                const a = inputValues.valueA ?? config.defaultValueA;
+                const b = inputValues.valueB ?? config.defaultValueB;
                 const numA = parseFloat(a);
                 const numB = parseFloat(b);
 
@@ -330,12 +331,14 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     default: result = false;
                 }
 
-                console.log(`[Condition] ${a} ${operator} ${b} = ${result}`);
+                const shouldContinue = (passWhen === 'true' && result) || (passWhen === 'false' && !result);
+                console.log(`[Condition] ${a} ${operator} ${b} = ${result}, passWhen: ${passWhen}, continue: ${shouldContinue}`);
 
                 return {
                     success: true,
                     conditionResult: result,
-                    nextHandle: result ? 'true-source' : 'false-source',
+                    shouldContinue,
+                    output: shouldContinue ? a : null,
                 };
             }
 
@@ -867,8 +870,9 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
 
             case 'condition': {
                 const operator = config.operator || 'equals';
-                const a = inputValues.valueA ?? config.valueA;
-                const b = inputValues.valueB ?? config.valueB;
+                const passWhen = config.passWhen || 'true';
+                const a = inputValues.valueA ?? config.defaultValueA;
+                const b = inputValues.valueB ?? config.defaultValueB;
                 const numA = parseFloat(a);
                 const numB = parseFloat(b);
 
@@ -876,26 +880,28 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
 
                 switch (operator) {
                     case 'equals': result = a == b; break;
+                    case 'strictEquals': result = a === b; break;
                     case 'notEquals': result = a != b; break;
                     case 'greaterThan': result = numA > numB; break;
                     case 'lessThan': result = numA < numB; break;
                     case 'greaterOrEqual': result = numA >= numB; break;
                     case 'lessOrEqual': result = numA <= numB; break;
                     case 'contains': result = String(a).includes(String(b)); break;
-                    case 'isEmpty': result = !a || a === ''; break;
-                    case 'isNotEmpty': result = a && a !== ''; break;
-                    case 'isTrue': result = a === true || a === 'true'; break;
-                    case 'isFalse': result = a === false || a === 'false'; break;
+                    case 'isEmpty': result = a === '' || a === null || a === undefined; break;
+                    case 'isNotEmpty': result = a !== '' && a !== null && a !== undefined; break;
+                    case 'isTrue': result = a === true || a === 'true' || a === 1 || a === '1'; break;
+                    case 'isFalse': result = a === false || a === 'false' || a === 0 || a === '0'; break;
                     default: result = false;
                 }
 
-                console.log(`[Runner] Condition: ${a} ${operator} ${b} = ${result}`);
+                const shouldContinue = (passWhen === 'true' && result) || (passWhen === 'false' && !result);
+                console.log(`[Runner] Condition: ${a} ${operator} ${b} = ${result}, passWhen: ${passWhen}, continue: ${shouldContinue}`);
 
                 return {
                     success: true,
-                    output: result,
                     conditionResult: result,
-                    nextHandle: result ? 'true-source' : 'false-source',
+                    shouldContinue,
+                    output: shouldContinue ? a : null,
                 };
             }
 
