@@ -17,9 +17,196 @@ const getNestedValue = (obj, path) => {
 const getDynamicPath = (fieldConfig) => {
     if (!fieldConfig) return null;
     if (typeof fieldConfig === "string") return { nodeId: null, path: fieldConfig };
-    if (typeof fieldConfig === "object")
+    if (typeof fieldConfig === "object") {
         return { nodeId: fieldConfig.nodeId, path: fieldConfig.path };
+    }
     return null;
+};
+
+// Helper to check if value is a placeholder pattern
+const isPlaceholder = (val) => typeof val === "string" && val.match(/\{\{\{.*?\}\}\}/);
+
+// Helper to get value, clearing unreplaced placeholders
+const getValueOrDefault = (inputVal, configVal) => {
+    if (inputVal !== undefined && inputVal !== null) return inputVal;
+    if (isPlaceholder(configVal)) return null;
+    return configVal;
+};
+
+// Time unit multipliers in milliseconds
+const TIME_MULTIPLIERS = {
+    minutes: 60 * 1000,
+    hours: 60 * 60 * 1000,
+    days: 24 * 60 * 60 * 1000,
+};
+
+// Calculate datetime value based on configuration
+const calculateDatetime = (config) => {
+    const now = new Date();
+
+    switch (config.datetimeOption) {
+        case "now":
+            return now;
+        case "today":
+            return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        case "tomorrow":
+            return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+        case "next_week":
+            return new Date(now.getTime() + 7 * TIME_MULTIPLIERS.days);
+        case "next_month":
+            return new Date(now.getTime() + 30 * TIME_MULTIPLIERS.days);
+        case "in_1_hour":
+            return new Date(now.getTime() + TIME_MULTIPLIERS.hours);
+        case "in_2_hours":
+            return new Date(now.getTime() + 2 * TIME_MULTIPLIERS.hours);
+        case "in_30_min":
+            return new Date(now.getTime() + 30 * TIME_MULTIPLIERS.minutes);
+        case "end_of_day":
+            return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        case "custom_offset": {
+            const amount = config.offsetAmount || 1;
+            const unit = config.offsetUnit || "hours";
+            return new Date(now.getTime() + amount * (TIME_MULTIPLIERS[unit] || 0));
+        }
+        case "fixed":
+            return config.fixedDateTime ? new Date(config.fixedDateTime) : now;
+        default:
+            return now;
+    }
+};
+
+// Evaluate condition operator
+const evaluateCondition = (operator, a, b) => {
+    const numA = parseFloat(a);
+    const numB = parseFloat(b);
+
+    switch (operator) {
+        case "equals":
+            return a == b;
+        case "strictEquals":
+            return a === b;
+        case "notEquals":
+            return a != b;
+        case "greaterThan":
+            return numA > numB;
+        case "lessThan":
+            return numA < numB;
+        case "greaterOrEqual":
+            return numA >= numB;
+        case "lessOrEqual":
+            return numA <= numB;
+        case "contains":
+            return String(a).includes(String(b));
+        case "isEmpty":
+            return a === "" || a === null || a === undefined;
+        case "isNotEmpty":
+            return a !== "" && a !== null && a !== undefined;
+        case "isTrue":
+            return a === true || a === "true" || a === 1 || a === "1";
+        case "isFalse":
+            return a === false || a === "false" || a === 0 || a === "0";
+        default:
+            return false;
+    }
+};
+
+// Resolve condition value based on mode (static or dynamic)
+const resolveConditionValue = (mode, staticVal, path, inputData) => {
+    if (mode === "static") {
+        return staticVal;
+    }
+    if (path && inputData && typeof inputData === "object") {
+        return getNestedValue(inputData, path);
+    }
+    return inputData;
+};
+
+// Extract dynamic field value from input data
+const extractDynamicField = (
+    inputData,
+    dynamicFieldPaths,
+    fieldName,
+    fallbackFields,
+    asJson = false,
+) => {
+    if (dynamicFieldPaths[fieldName]) {
+        const extracted = getNestedValue(inputData, dynamicFieldPaths[fieldName]);
+        if (extracted !== undefined) {
+            if (typeof extracted === "string") return extracted;
+            return asJson ? JSON.stringify(extracted, null, 2) : JSON.stringify(extracted);
+        }
+    }
+    // Auto-detect from common field names
+    for (const field of fallbackFields) {
+        const value = inputData._mapped?.[field] ?? inputData[field];
+        if (value !== undefined) return value;
+    }
+    return undefined;
+};
+
+// Get source data from specific node or default input (for multi-source nodes like Google Docs)
+const getSourceData = (inputValues, fieldConfig, defaultInput) => {
+    const pathConfig = getDynamicPath(fieldConfig);
+    if (!pathConfig) return defaultInput;
+
+    if (pathConfig.nodeId) {
+        const sourceKey = `__node_${pathConfig.nodeId}`;
+        if (inputValues[sourceKey] !== undefined) {
+            return inputValues[sourceKey];
+        }
+    }
+    return defaultInput;
+};
+
+// Extract dynamic field with source node support and path extraction
+const extractDynamicFieldWithSource = (
+    inputValues,
+    dynamicFieldPaths,
+    fieldName,
+    fallbackFields,
+    asJson = false,
+) => {
+    const pathConfig = getDynamicPath(dynamicFieldPaths[fieldName]);
+    const inputData = getSourceData(inputValues, dynamicFieldPaths[fieldName], inputValues.input);
+
+    if (inputData === undefined || inputData === null) return undefined;
+
+    if (typeof inputData === "string") return inputData;
+
+    if (typeof inputData === "object") {
+        if (pathConfig?.path) {
+            const extracted = getNestedValue(inputData, pathConfig.path);
+            if (extracted !== undefined) {
+                if (typeof extracted === "string") return extracted;
+                return asJson ? JSON.stringify(extracted, null, 2) : JSON.stringify(extracted);
+            }
+        }
+        // Auto-detect from common field names
+        for (const field of fallbackFields) {
+            const value = inputData._mapped?.[field] ?? inputData[field];
+            if (value !== undefined) return value;
+        }
+        return asJson ? JSON.stringify(inputData, null, 2) : JSON.stringify(inputData);
+    }
+    return undefined;
+};
+
+// Apply response mapping to create _mapped object for dynamic field access
+const applyResponseMapping = (data, responseMapping) => {
+    if (!responseMapping || responseMapping.length === 0 || !data) return;
+
+    const mapped = {};
+    for (const mapping of responseMapping) {
+        if (mapping.alias && mapping.path) {
+            const value = getNestedValue(data, mapping.path);
+            if (value !== undefined) {
+                mapped[mapping.alias] = value;
+            }
+        }
+    }
+    if (Object.keys(mapped).length > 0) {
+        data._mapped = mapped;
+    }
 };
 
 // Convert HTML rich text to formatted plain text
@@ -244,91 +431,16 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     return { success: true, finished: true };
 
                 case "constant": {
-                    // Handle datetime type - calculate value at runtime
                     if (config.valueType === "datetime") {
-                        const now = new Date();
-                        let result;
-
-                        switch (config.datetimeOption) {
-                            case "now":
-                                result = now;
-                                break;
-                            case "today":
-                                result = new Date(
-                                    now.getFullYear(),
-                                    now.getMonth(),
-                                    now.getDate(),
-                                    0,
-                                    0,
-                                    0,
-                                );
-                                break;
-                            case "tomorrow":
-                                result = new Date(
-                                    now.getFullYear(),
-                                    now.getMonth(),
-                                    now.getDate() + 1,
-                                    0,
-                                    0,
-                                    0,
-                                );
-                                break;
-                            case "next_week":
-                                result = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-                                break;
-                            case "next_month":
-                                result = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-                                break;
-                            case "in_1_hour":
-                                result = new Date(now.getTime() + 60 * 60 * 1000);
-                                break;
-                            case "in_2_hours":
-                                result = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-                                break;
-                            case "in_30_min":
-                                result = new Date(now.getTime() + 30 * 60 * 1000);
-                                break;
-                            case "end_of_day":
-                                result = new Date(
-                                    now.getFullYear(),
-                                    now.getMonth(),
-                                    now.getDate(),
-                                    23,
-                                    59,
-                                    59,
-                                );
-                                break;
-                            case "custom_offset": {
-                                const multipliers = {
-                                    minutes: 60 * 1000,
-                                    hours: 60 * 60 * 1000,
-                                    days: 24 * 60 * 60 * 1000,
-                                };
-                                const amount = config.offsetAmount || 1;
-                                const unit = config.offsetUnit || "hours";
-                                result = new Date(
-                                    now.getTime() + amount * (multipliers[unit] || 0),
-                                );
-                                break;
-                            }
-                            case "fixed":
-                                result = config.fixedDateTime
-                                    ? new Date(config.fixedDateTime)
-                                    : now;
-                                break;
-                            default:
-                                result = now;
-                        }
-
-                        // Format as full ISO 8601 string for Google Calendar compatibility
-                        const formattedDate = result.toISOString();
-                        return { success: true, output: formattedDate };
+                        const result = calculateDatetime(config);
+                        return { success: true, output: result.toISOString() };
                     }
 
-                    // Handle richtext with plaintext output format
                     if (config.valueType === "richtext" && config.outputFormat === "plaintext") {
-                        const plaintext = convertHtmlToPlaintext(config.value || "");
-                        return { success: true, output: plaintext };
+                        return {
+                            success: true,
+                            output: convertHtmlToPlaintext(config.value || ""),
+                        };
                     }
 
                     return { success: true, output: config.value };
@@ -337,90 +449,22 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                 case "condition": {
                     const operator = config.operator || "equals";
                     const passWhen = config.passWhen || "true";
-
-                    // New config structure with static/dynamic modes
-                    const valueAMode = config.valueAMode || "static";
-                    const valueAStatic = config.valueAStatic || "";
-                    const valueAPath = config.valueAPath || "";
-                    const valueBMode = config.valueBMode || "static";
-                    const valueBStatic = config.valueBStatic || "";
-                    const valueBPath = config.valueBPath || "";
-
-                    // Get input data (single input handle)
                     const inputData = inputValues.input;
 
-                    // Resolve value A based on mode
-                    let a;
-                    if (valueAMode === "static") {
-                        a = valueAStatic;
-                    } else {
-                        // Dynamic mode - extract from input
-                        if (valueAPath && inputData && typeof inputData === "object") {
-                            a = getNestedValue(inputData, valueAPath);
-                        } else {
-                            a = inputData;
-                        }
-                    }
+                    const a = resolveConditionValue(
+                        config.valueAMode || "static",
+                        config.valueAStatic || "",
+                        config.valueAPath || "",
+                        inputData,
+                    );
+                    const b = resolveConditionValue(
+                        config.valueBMode || "static",
+                        config.valueBStatic || "",
+                        config.valueBPath || "",
+                        inputData,
+                    );
 
-                    // Resolve value B based on mode
-                    let b;
-                    if (valueBMode === "static") {
-                        b = valueBStatic;
-                    } else {
-                        // Dynamic mode - extract from input
-                        if (valueBPath && inputData && typeof inputData === "object") {
-                            b = getNestedValue(inputData, valueBPath);
-                        } else {
-                            b = inputData;
-                        }
-                    }
-
-                    const numA = parseFloat(a);
-                    const numB = parseFloat(b);
-
-                    let result = false;
-
-                    switch (operator) {
-                        case "equals":
-                            result = a == b;
-                            break;
-                        case "strictEquals":
-                            result = a === b;
-                            break;
-                        case "notEquals":
-                            result = a != b;
-                            break;
-                        case "greaterThan":
-                            result = numA > numB;
-                            break;
-                        case "lessThan":
-                            result = numA < numB;
-                            break;
-                        case "greaterOrEqual":
-                            result = numA >= numB;
-                            break;
-                        case "lessOrEqual":
-                            result = numA <= numB;
-                            break;
-                        case "contains":
-                            result = String(a).includes(String(b));
-                            break;
-                        case "isEmpty":
-                            result = a === "" || a === null || a === undefined;
-                            break;
-                        case "isNotEmpty":
-                            result = a !== "" && a !== null && a !== undefined;
-                            break;
-                        case "isTrue":
-                            result = a === true || a === "true" || a === 1 || a === "1";
-                            break;
-                        case "isFalse":
-                            result = a === false || a === "false" || a === 0 || a === "0";
-                            break;
-                        default:
-                            result = false;
-                    }
-
+                    const result = evaluateCondition(operator, a, b);
                     const shouldContinue =
                         (passWhen === "true" && result) || (passWhen === "false" && !result);
 
@@ -539,37 +583,22 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         headers = {},
                         responseMapping = [],
                     } = config;
+                    const upperMethod = method.toUpperCase();
 
                     const response = await fetch(url, {
-                        method: method.toUpperCase(),
+                        method: upperMethod,
                         headers: {
                             "Content-Type": "application/json",
                             Accept: "application/json",
                             ...headers,
                         },
-                        body: ["POST", "PUT", "PATCH"].includes(method.toUpperCase())
+                        body: ["POST", "PUT", "PATCH"].includes(upperMethod)
                             ? JSON.stringify(requestBody)
                             : undefined,
                     });
 
                     const data = await response.json();
-
-                    // Apply responseMapping to create _mapped object for dynamic field access
-                    if (responseMapping && responseMapping.length > 0 && data) {
-                        const mapped = {};
-                        responseMapping.forEach((mapping) => {
-                            if (mapping.alias && mapping.path) {
-                                const value = getNestedValue(data, mapping.path);
-                                if (value !== undefined) {
-                                    mapped[mapping.alias] = value;
-                                }
-                            }
-                        });
-                        // Attach _mapped to the data object so downstream nodes can access it
-                        if (Object.keys(mapped).length > 0) {
-                            data._mapped = mapped;
-                        }
-                    }
+                    applyResponseMapping(data, responseMapping);
 
                     return { success: true, output: data };
                 }
@@ -608,112 +637,58 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     if (!teamId) {
                         throw new Error("Team ID is required for Google Calendar actions");
                     }
-
                     if (!config.operation) {
                         throw new Error("Google Calendar action requires an operation");
                     }
 
-                    // Helper to check if value is a placeholder pattern
-                    const isPlaceholder = (val) =>
-                        typeof val === "string" && val.match(/\{\{\{.*?\}\}\}/);
-
-                    // Helper to get value, clearing placeholders
-                    const getValue = (inputVal, configVal) => {
-                        if (inputVal !== undefined && inputVal !== null) return inputVal;
-                        if (isPlaceholder(configVal)) return null; // Clear unreplaced placeholders
-                        return configVal;
-                    };
-
-                    // Check if we have a connected Calendar event object (from previous Calendar node)
-                    // If so, extract the id for eventId
-                    let eventIdFromInput = inputValues.eventId;
-                    if (
-                        !eventIdFromInput &&
-                        inputValues.input &&
-                        typeof inputValues.input === "object"
-                    ) {
-                        // If input is a Calendar event object, extract the id
-                        if (inputValues.input.id) {
-                            eventIdFromInput = inputValues.input.id;
-                        }
-                    }
-
-                    // Get dynamic field configuration
+                    // Extract eventId from connected Calendar event object if available
+                    const eventIdFromInput = inputValues.eventId ?? (inputValues.input?.id || null);
                     const dynamicFields = config.dynamicFields || {};
                     const dynamicFieldPaths = config.dynamicFieldPaths || {};
-
-                    // Use input values from connected nodes if available, otherwise fall back to config
-                    // If the config value is a placeholder but no input provides it, use null (will get default on backend)
-                    let summary = getValue(inputValues.summary, config.summary);
-                    let description = getValue(inputValues.description, config.description);
-                    let location = getValue(inputValues.location, config.location);
-                    let startDateTime = getValue(inputValues.startDateTime, config.startDateTime);
-                    let endDateTime = getValue(inputValues.endDateTime, config.endDateTime);
-                    let attendees = getValue(inputValues.attendees, config.attendees);
-                    const eventId = getValue(eventIdFromInput, config.eventId);
-
-                    // Handle dynamic fields from connected action node (API, etc.)
                     const inputData = inputValues.input;
+
+                    // Resolve field values from inputs or config
+                    let summary = getValueOrDefault(inputValues.summary, config.summary);
+                    let description = getValueOrDefault(
+                        inputValues.description,
+                        config.description,
+                    );
+                    let location = getValueOrDefault(inputValues.location, config.location);
+                    const startDateTime = getValueOrDefault(
+                        inputValues.startDateTime,
+                        config.startDateTime,
+                    );
+                    const endDateTime = getValueOrDefault(
+                        inputValues.endDateTime,
+                        config.endDateTime,
+                    );
+                    const attendees = getValueOrDefault(inputValues.attendees, config.attendees);
+                    const eventId = getValueOrDefault(eventIdFromInput, config.eventId);
+
+                    // Apply dynamic field extraction from connected action node
                     if (inputData && typeof inputData === "object") {
-                        // Summary
                         if (dynamicFields.summary) {
-                            if (dynamicFieldPaths.summary) {
-                                const extracted = getNestedValue(
-                                    inputData,
-                                    dynamicFieldPaths.summary,
-                                );
-                                if (extracted !== undefined) {
-                                    summary =
-                                        typeof extracted === "string"
-                                            ? extracted
-                                            : JSON.stringify(extracted);
-                                }
-                            } else {
-                                summary =
-                                    inputData._mapped?.summary ??
-                                    inputData.summary ??
-                                    inputData.title ??
-                                    summary;
-                            }
+                            summary =
+                                extractDynamicField(inputData, dynamicFieldPaths, "summary", [
+                                    "summary",
+                                    "title",
+                                ]) ?? summary;
                         }
-                        // Description
                         if (dynamicFields.description) {
-                            if (dynamicFieldPaths.description) {
-                                const extracted = getNestedValue(
+                            description =
+                                extractDynamicField(
                                     inputData,
-                                    dynamicFieldPaths.description,
-                                );
-                                if (extracted !== undefined) {
-                                    description =
-                                        typeof extracted === "string"
-                                            ? extracted
-                                            : JSON.stringify(extracted, null, 2);
-                                }
-                            } else {
-                                description =
-                                    inputData._mapped?.description ??
-                                    inputData.description ??
-                                    inputData.body ??
-                                    description;
-                            }
+                                    dynamicFieldPaths,
+                                    "description",
+                                    ["description", "body"],
+                                    true,
+                                ) ?? description;
                         }
-                        // Location
                         if (dynamicFields.location) {
-                            if (dynamicFieldPaths.location) {
-                                const extracted = getNestedValue(
-                                    inputData,
-                                    dynamicFieldPaths.location,
-                                );
-                                if (extracted !== undefined) {
-                                    location =
-                                        typeof extracted === "string"
-                                            ? extracted
-                                            : JSON.stringify(extracted);
-                                }
-                            } else {
-                                location =
-                                    inputData._mapped?.location ?? inputData.location ?? location;
-                            }
+                            location =
+                                extractDynamicField(inputData, dynamicFieldPaths, "location", [
+                                    "location",
+                                ]) ?? location;
                         }
                     }
 
@@ -727,13 +702,13 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                             team_id: teamId,
                             operation: config.operation,
                             calendarId: config.calendarId || "primary",
-                            summary: summary,
-                            description: description,
-                            startDateTime: startDateTime,
-                            endDateTime: endDateTime,
-                            location: location,
-                            attendees: attendees,
-                            eventId: eventId,
+                            summary,
+                            description,
+                            startDateTime,
+                            endDateTime,
+                            location,
+                            attendees,
+                            eventId,
                             timeMin: config.timeMin,
                             timeMax: config.timeMax,
                             maxResults: config.maxResults,
@@ -743,7 +718,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     const calendarData = await calendarResponse.json();
 
                     if (!calendarResponse.ok || !calendarData.success) {
-                        // Check for specific error codes
                         if (calendarData.errorCode === "EVENT_NOT_FOUND") {
                             console.warn(
                                 "[Runner] Event was deleted or not found:",
@@ -755,7 +729,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         );
                     }
 
-                    // Handle delete operation - return special marker
                     if (calendarData.deleted) {
                         return {
                             success: true,
@@ -772,139 +745,39 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     if (!teamId) {
                         throw new Error("Team ID is required for Google Docs actions");
                     }
-
                     if (!config.operation) {
                         throw new Error("Google Docs action requires an operation");
                     }
 
-                    // Helper to check if value is a placeholder pattern
-                    const isPlaceholder = (val) =>
-                        typeof val === "string" && val.match(/\{\{\{.*?\}\}\}/);
-
-                    // Helper to get value, clearing placeholders
-                    const getValue = (inputVal, configVal) => {
-                        if (inputVal !== undefined && inputVal !== null) return inputVal;
-                        if (isPlaceholder(configVal)) return null;
-                        return configVal;
-                    };
-
-                    // Helper to get input data from specific source node or default input
-                    const getSourceData = (fieldConfig, defaultInput) => {
-                        const pathConfig = getDynamicPath(fieldConfig);
-                        if (!pathConfig) return defaultInput;
-
-                        // If nodeId specified, look for that specific node's output in inputValues
-                        if (pathConfig.nodeId) {
-                            const sourceKey = `__node_${pathConfig.nodeId}`;
-                            if (inputValues[sourceKey] !== undefined) {
-                                return inputValues[sourceKey];
-                            }
-                        }
-                        return defaultInput;
-                    };
-
-                    // Check if we have a connected Docs document object (from previous Docs node)
-                    let documentIdFromInput = inputValues.documentId;
-                    if (
-                        !documentIdFromInput &&
-                        inputValues.input &&
-                        typeof inputValues.input === "object"
-                    ) {
-                        if (inputValues.input.id) {
-                            documentIdFromInput = inputValues.input.id;
-                        }
-                    }
-
-                    // Get dynamic field configuration
+                    // Extract documentId from connected Docs document object if available
+                    const documentIdFromInput =
+                        inputValues.documentId ?? (inputValues.input?.id || null);
                     const dynamicFields = config.dynamicFields || {};
                     const dynamicFieldPaths = config.dynamicFieldPaths || {};
 
-                    // Extract values using dynamic field paths from API response
-                    let title = getValue(inputValues.title, config.title);
-                    let content = getValue(inputValues.content, config.content);
-                    const documentId = getValue(documentIdFromInput, config.documentId);
+                    // Resolve field values from inputs or config
+                    let title = getValueOrDefault(inputValues.title, config.title);
+                    let content = getValueOrDefault(inputValues.content, config.content);
+                    const documentId = getValueOrDefault(documentIdFromInput, config.documentId);
 
-                    // Handle dynamic title from connected action node (API, Constant, etc.)
+                    // Apply dynamic field extraction from connected action node
                     if (dynamicFields.title) {
-                        const titlePathConfig = getDynamicPath(dynamicFieldPaths.title);
-                        const inputData = getSourceData(dynamicFieldPaths.title, inputValues.input);
-
-                        if (inputData !== undefined && inputData !== null) {
-                            if (typeof inputData === "string") {
-                                title = inputData;
-                            } else if (typeof inputData === "object") {
-                                if (titlePathConfig?.path) {
-                                    const extracted = getNestedValue(
-                                        inputData,
-                                        titlePathConfig.path,
-                                    );
-                                    if (extracted !== undefined) {
-                                        title =
-                                            typeof extracted === "string"
-                                                ? extracted
-                                                : JSON.stringify(extracted);
-                                    }
-                                } else {
-                                    // Auto-detect common field names
-                                    title =
-                                        inputData._mapped?.title ??
-                                        inputData.title ??
-                                        inputData.name ??
-                                        JSON.stringify(inputData);
-                                }
-                            }
-                        }
+                        title =
+                            extractDynamicFieldWithSource(inputValues, dynamicFieldPaths, "title", [
+                                "title",
+                                "name",
+                            ]) ?? title;
                     }
-
-                    // Handle dynamic content from connected action node (API, Constant, etc.)
                     if (dynamicFields.content) {
-                        const contentPathConfig = getDynamicPath(dynamicFieldPaths.content);
-                        const inputData = getSourceData(
-                            dynamicFieldPaths.content,
-                            inputValues.input,
-                        );
-
-                        if (inputData !== undefined && inputData !== null) {
-                            if (typeof inputData === "string") {
-                                content = inputData;
-                            } else if (typeof inputData === "object") {
-                                if (contentPathConfig?.path) {
-                                    const extracted = getNestedValue(
-                                        inputData,
-                                        contentPathConfig.path,
-                                    );
-                                    if (extracted !== undefined) {
-                                        content =
-                                            typeof extracted === "string"
-                                                ? extracted
-                                                : JSON.stringify(extracted, null, 2);
-                                    }
-                                } else {
-                                    // Auto-detect common field names
-                                    content =
-                                        inputData._mapped?.content ??
-                                        inputData.content ??
-                                        inputData.body ??
-                                        inputData.text ??
-                                        JSON.stringify(inputData, null, 2);
-                                }
-                            }
-                        }
+                        content =
+                            extractDynamicFieldWithSource(
+                                inputValues,
+                                dynamicFieldPaths,
+                                "content",
+                                ["content", "body", "text"],
+                                true,
+                            ) ?? content;
                     }
-
-                    const requestBodyExec = {
-                        team_id: teamId,
-                        operation: config.operation,
-                        // Only include documentId if it's a non-empty string (required for read/update, not for create)
-                        documentId:
-                            documentId && typeof documentId === "string" ? documentId : undefined,
-                        title: title,
-                        content: content,
-                        updateOperation: config.updateOperation,
-                        searchText: config.searchText,
-                        insertIndex: config.insertIndex,
-                        maxResults: config.maxResults,
-                    };
 
                     const docsResponse = await fetch("/api/workflows/actions/google-docs", {
                         method: "POST",
@@ -912,25 +785,33 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                             "Content-Type": "application/json",
                             Accept: "application/json",
                         },
-                        body: JSON.stringify(requestBodyExec),
+                        body: JSON.stringify({
+                            team_id: teamId,
+                            operation: config.operation,
+                            documentId:
+                                documentId && typeof documentId === "string"
+                                    ? documentId
+                                    : undefined,
+                            title,
+                            content,
+                            updateOperation: config.updateOperation,
+                            searchText: config.searchText,
+                            insertIndex: config.insertIndex,
+                            maxResults: config.maxResults,
+                        }),
                     });
 
                     const docsData = await docsResponse.json();
 
                     if (!docsResponse.ok || !docsData.success) {
-                        console.error(
-                            "[Runner] Google Docs action failed (executeNode):",
-                            docsResponse.status,
-                            docsData,
-                        );
                         if (docsData.errorCode === "DOCUMENT_NOT_FOUND") {
                             console.warn("[Runner] Document not found:", docsData.error);
                         }
-                        const errorMsgExec =
+                        throw new Error(
                             docsData.message ||
-                            docsData.error ||
-                            "Failed to execute Google Docs action";
-                        throw new Error(errorMsgExec);
+                                docsData.error ||
+                                "Failed to execute Google Docs action",
+                        );
                     }
                     return { success: true, output: docsData.data };
                 }
@@ -941,7 +822,7 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     return { success: true, output: inputValues.input };
             }
         },
-        [getInputValues],
+        [getInputValues, nodes, edges, teamId],
     );
 
     // Execute node with provided input values (for dependency-aware execution)
@@ -962,90 +843,16 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     return { success: true, finished: true };
 
                 case "constant": {
-                    // Handle datetime type - calculate value at runtime
                     if (config.valueType === "datetime") {
-                        const now = new Date();
-                        let result;
-
-                        switch (config.datetimeOption) {
-                            case "now":
-                                result = now;
-                                break;
-                            case "today":
-                                result = new Date(
-                                    now.getFullYear(),
-                                    now.getMonth(),
-                                    now.getDate(),
-                                    0,
-                                    0,
-                                    0,
-                                );
-                                break;
-                            case "tomorrow":
-                                result = new Date(
-                                    now.getFullYear(),
-                                    now.getMonth(),
-                                    now.getDate() + 1,
-                                    0,
-                                    0,
-                                    0,
-                                );
-                                break;
-                            case "next_week":
-                                result = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-                                break;
-                            case "next_month":
-                                result = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-                                break;
-                            case "in_1_hour":
-                                result = new Date(now.getTime() + 60 * 60 * 1000);
-                                break;
-                            case "in_2_hours":
-                                result = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-                                break;
-                            case "in_30_min":
-                                result = new Date(now.getTime() + 30 * 60 * 1000);
-                                break;
-                            case "end_of_day":
-                                result = new Date(
-                                    now.getFullYear(),
-                                    now.getMonth(),
-                                    now.getDate(),
-                                    23,
-                                    59,
-                                    59,
-                                );
-                                break;
-                            case "custom_offset": {
-                                const multipliers = {
-                                    minutes: 60 * 1000,
-                                    hours: 60 * 60 * 1000,
-                                    days: 24 * 60 * 60 * 1000,
-                                };
-                                const amount = config.offsetAmount || 1;
-                                const unit = config.offsetUnit || "hours";
-                                result = new Date(
-                                    now.getTime() + amount * (multipliers[unit] || 0),
-                                );
-                                break;
-                            }
-                            case "fixed":
-                                result = config.fixedDateTime
-                                    ? new Date(config.fixedDateTime)
-                                    : now;
-                                break;
-                            default:
-                                result = now;
-                        }
-
-                        const formattedDate = result.toISOString();
-                        return { success: true, output: formattedDate };
+                        const result = calculateDatetime(config);
+                        return { success: true, output: result.toISOString() };
                     }
 
-                    // Handle richtext with plaintext output format
                     if (config.valueType === "richtext" && config.outputFormat === "plaintext") {
-                        const plaintext = convertHtmlToPlaintext(config.value || "");
-                        return { success: true, output: plaintext };
+                        return {
+                            success: true,
+                            output: convertHtmlToPlaintext(config.value || ""),
+                        };
                     }
 
                     return { success: true, output: config.value };
@@ -1054,90 +861,22 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                 case "condition": {
                     const operator = config.operator || "equals";
                     const passWhen = config.passWhen || "true";
-
-                    // New config structure with static/dynamic modes
-                    const valueAMode = config.valueAMode || "static";
-                    const valueAStatic = config.valueAStatic || "";
-                    const valueAPath = config.valueAPath || "";
-                    const valueBMode = config.valueBMode || "static";
-                    const valueBStatic = config.valueBStatic || "";
-                    const valueBPath = config.valueBPath || "";
-
-                    // Get input data (single input handle)
                     const inputData = inputValues.input;
 
-                    // Resolve value A based on mode
-                    let a;
-                    if (valueAMode === "static") {
-                        a = valueAStatic;
-                    } else {
-                        // Dynamic mode - extract from input
-                        if (valueAPath && inputData && typeof inputData === "object") {
-                            a = getNestedValue(inputData, valueAPath);
-                        } else {
-                            a = inputData;
-                        }
-                    }
+                    const a = resolveConditionValue(
+                        config.valueAMode || "static",
+                        config.valueAStatic || "",
+                        config.valueAPath || "",
+                        inputData,
+                    );
+                    const b = resolveConditionValue(
+                        config.valueBMode || "static",
+                        config.valueBStatic || "",
+                        config.valueBPath || "",
+                        inputData,
+                    );
 
-                    // Resolve value B based on mode
-                    let b;
-                    if (valueBMode === "static") {
-                        b = valueBStatic;
-                    } else {
-                        // Dynamic mode - extract from input
-                        if (valueBPath && inputData && typeof inputData === "object") {
-                            b = getNestedValue(inputData, valueBPath);
-                        } else {
-                            b = inputData;
-                        }
-                    }
-
-                    const numA = parseFloat(a);
-                    const numB = parseFloat(b);
-
-                    let result = false;
-
-                    switch (operator) {
-                        case "equals":
-                            result = a == b;
-                            break;
-                        case "strictEquals":
-                            result = a === b;
-                            break;
-                        case "notEquals":
-                            result = a != b;
-                            break;
-                        case "greaterThan":
-                            result = numA > numB;
-                            break;
-                        case "lessThan":
-                            result = numA < numB;
-                            break;
-                        case "greaterOrEqual":
-                            result = numA >= numB;
-                            break;
-                        case "lessOrEqual":
-                            result = numA <= numB;
-                            break;
-                        case "contains":
-                            result = String(a).includes(String(b));
-                            break;
-                        case "isEmpty":
-                            result = a === "" || a === null || a === undefined;
-                            break;
-                        case "isNotEmpty":
-                            result = a !== "" && a !== null && a !== undefined;
-                            break;
-                        case "isTrue":
-                            result = a === true || a === "true" || a === 1 || a === "1";
-                            break;
-                        case "isFalse":
-                            result = a === false || a === "false" || a === 0 || a === "0";
-                            break;
-                        default:
-                            result = false;
-                    }
-
+                    const result = evaluateCondition(operator, a, b);
                     const shouldContinue =
                         (passWhen === "true" && result) || (passWhen === "false" && !result);
 
@@ -1150,8 +889,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                 }
 
                 case "branch":
-                    return { success: true, output: inputValues.input };
-
                 case "join":
                     return { success: true, output: inputValues.input };
 
@@ -1202,112 +939,58 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     if (!teamId) {
                         throw new Error("Team ID is required for Google Calendar actions");
                     }
-
                     if (!config.operation) {
                         throw new Error("Google Calendar action requires an operation");
                     }
 
-                    // Helper to check if value is a placeholder pattern
-                    const isPlaceholder = (val) =>
-                        typeof val === "string" && val.match(/\{\{\{.*?\}\}\}/);
-
-                    // Helper to get value, clearing placeholders
-                    const getValue = (inputVal, configVal) => {
-                        if (inputVal !== undefined && inputVal !== null) return inputVal;
-                        if (isPlaceholder(configVal)) return null; // Clear unreplaced placeholders
-                        return configVal;
-                    };
-
-                    // Check if we have a connected Calendar event object (from previous Calendar node)
-                    // If so, extract the id for eventId
-                    let eventIdFromInput = inputValues.eventId;
-                    if (
-                        !eventIdFromInput &&
-                        inputValues.input &&
-                        typeof inputValues.input === "object"
-                    ) {
-                        // If input is a Calendar event object, extract the id
-                        if (inputValues.input.id) {
-                            eventIdFromInput = inputValues.input.id;
-                        }
-                    }
-
-                    // Get dynamic field configuration
+                    // Extract eventId from connected Calendar event object if available
+                    const eventIdFromInput = inputValues.eventId ?? (inputValues.input?.id || null);
                     const dynamicFields = config.dynamicFields || {};
                     const dynamicFieldPaths = config.dynamicFieldPaths || {};
-
-                    // Use input values from connected nodes if available, otherwise fall back to config
-                    // If the config value is a placeholder but no input provides it, use null (will get default on backend)
-                    let summary = getValue(inputValues.summary, config.summary);
-                    let description = getValue(inputValues.description, config.description);
-                    let location = getValue(inputValues.location, config.location);
-                    let startDateTime = getValue(inputValues.startDateTime, config.startDateTime);
-                    let endDateTime = getValue(inputValues.endDateTime, config.endDateTime);
-                    let attendees = getValue(inputValues.attendees, config.attendees);
-                    const eventId = getValue(eventIdFromInput, config.eventId);
-
-                    // Handle dynamic fields from connected action node (API, etc.)
                     const inputData = inputValues.input;
+
+                    // Resolve field values from inputs or config
+                    let summary = getValueOrDefault(inputValues.summary, config.summary);
+                    let description = getValueOrDefault(
+                        inputValues.description,
+                        config.description,
+                    );
+                    let location = getValueOrDefault(inputValues.location, config.location);
+                    const startDateTime = getValueOrDefault(
+                        inputValues.startDateTime,
+                        config.startDateTime,
+                    );
+                    const endDateTime = getValueOrDefault(
+                        inputValues.endDateTime,
+                        config.endDateTime,
+                    );
+                    const attendees = getValueOrDefault(inputValues.attendees, config.attendees);
+                    const eventId = getValueOrDefault(eventIdFromInput, config.eventId);
+
+                    // Apply dynamic field extraction from connected action node
                     if (inputData && typeof inputData === "object") {
-                        // Summary
                         if (dynamicFields.summary) {
-                            if (dynamicFieldPaths.summary) {
-                                const extracted = getNestedValue(
-                                    inputData,
-                                    dynamicFieldPaths.summary,
-                                );
-                                if (extracted !== undefined) {
-                                    summary =
-                                        typeof extracted === "string"
-                                            ? extracted
-                                            : JSON.stringify(extracted);
-                                }
-                            } else {
-                                summary =
-                                    inputData._mapped?.summary ??
-                                    inputData.summary ??
-                                    inputData.title ??
-                                    summary;
-                            }
+                            summary =
+                                extractDynamicField(inputData, dynamicFieldPaths, "summary", [
+                                    "summary",
+                                    "title",
+                                ]) ?? summary;
                         }
-                        // Description
                         if (dynamicFields.description) {
-                            if (dynamicFieldPaths.description) {
-                                const extracted = getNestedValue(
+                            description =
+                                extractDynamicField(
                                     inputData,
-                                    dynamicFieldPaths.description,
-                                );
-                                if (extracted !== undefined) {
-                                    description =
-                                        typeof extracted === "string"
-                                            ? extracted
-                                            : JSON.stringify(extracted, null, 2);
-                                }
-                            } else {
-                                description =
-                                    inputData._mapped?.description ??
-                                    inputData.description ??
-                                    inputData.body ??
-                                    description;
-                            }
+                                    dynamicFieldPaths,
+                                    "description",
+                                    ["description", "body"],
+                                    true,
+                                ) ?? description;
                         }
-                        // Location
                         if (dynamicFields.location) {
-                            if (dynamicFieldPaths.location) {
-                                const extracted = getNestedValue(
-                                    inputData,
-                                    dynamicFieldPaths.location,
-                                );
-                                if (extracted !== undefined) {
-                                    location =
-                                        typeof extracted === "string"
-                                            ? extracted
-                                            : JSON.stringify(extracted);
-                                }
-                            } else {
-                                location =
-                                    inputData._mapped?.location ?? inputData.location ?? location;
-                            }
+                            location =
+                                extractDynamicField(inputData, dynamicFieldPaths, "location", [
+                                    "location",
+                                ]) ?? location;
                         }
                     }
 
@@ -1321,13 +1004,13 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                             team_id: teamId,
                             operation: config.operation,
                             calendarId: config.calendarId || "primary",
-                            summary: summary,
-                            description: description,
-                            startDateTime: startDateTime,
-                            endDateTime: endDateTime,
-                            location: location,
-                            attendees: attendees,
-                            eventId: eventId,
+                            summary,
+                            description,
+                            startDateTime,
+                            endDateTime,
+                            location,
+                            attendees,
+                            eventId,
                             timeMin: config.timeMin,
                             timeMax: config.timeMax,
                             maxResults: config.maxResults,
@@ -1337,7 +1020,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     const calendarData = await calendarResponse.json();
 
                     if (!calendarResponse.ok || !calendarData.success) {
-                        // Check for specific error codes
                         if (calendarData.errorCode === "EVENT_NOT_FOUND") {
                             console.warn(
                                 "[Runner] Event was deleted or not found:",
@@ -1349,7 +1031,6 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         );
                     }
 
-                    // Handle delete operation - return special marker
                     if (calendarData.deleted) {
                         return {
                             success: true,
@@ -1366,139 +1047,39 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                     if (!teamId) {
                         throw new Error("Team ID is required for Google Docs actions");
                     }
-
                     if (!config.operation) {
                         throw new Error("Google Docs action requires an operation");
                     }
 
-                    // Helper to check if value is a placeholder pattern
-                    const isPlaceholder = (val) =>
-                        typeof val === "string" && val.match(/\{\{\{.*?\}\}\}/);
-
-                    // Helper to get value, clearing placeholders
-                    const getValue = (inputVal, configVal) => {
-                        if (inputVal !== undefined && inputVal !== null) return inputVal;
-                        if (isPlaceholder(configVal)) return null;
-                        return configVal;
-                    };
-
-                    // Helper to get input data from specific source node or default input
-                    const getSourceData = (fieldConfig, defaultInput) => {
-                        const pathConfig = getDynamicPath(fieldConfig);
-                        if (!pathConfig) return defaultInput;
-
-                        // If nodeId specified, look for that specific node's output in inputValues
-                        if (pathConfig.nodeId) {
-                            const sourceKey = `__node_${pathConfig.nodeId}`;
-                            if (inputValues[sourceKey] !== undefined) {
-                                return inputValues[sourceKey];
-                            }
-                        }
-                        return defaultInput;
-                    };
-
-                    // Check if we have a connected Docs document object (from previous Docs node)
-                    let documentIdFromInput = inputValues.documentId;
-                    if (
-                        !documentIdFromInput &&
-                        inputValues.input &&
-                        typeof inputValues.input === "object"
-                    ) {
-                        if (inputValues.input.id) {
-                            documentIdFromInput = inputValues.input.id;
-                        }
-                    }
-
-                    // Get dynamic field configuration
+                    // Extract documentId from connected Docs document object if available
+                    const documentIdFromInput =
+                        inputValues.documentId ?? (inputValues.input?.id || null);
                     const dynamicFields = config.dynamicFields || {};
                     const dynamicFieldPaths = config.dynamicFieldPaths || {};
 
-                    // Extract values using dynamic field paths from API response
-                    let title = getValue(inputValues.title, config.title);
-                    let content = getValue(inputValues.content, config.content);
-                    const documentId = getValue(documentIdFromInput, config.documentId);
+                    // Resolve field values from inputs or config
+                    let title = getValueOrDefault(inputValues.title, config.title);
+                    let content = getValueOrDefault(inputValues.content, config.content);
+                    const documentId = getValueOrDefault(documentIdFromInput, config.documentId);
 
-                    // Handle dynamic title from connected action node (API, Constant, etc.)
+                    // Apply dynamic field extraction from connected action node
                     if (dynamicFields.title) {
-                        const titlePathConfig = getDynamicPath(dynamicFieldPaths.title);
-                        const inputData = getSourceData(dynamicFieldPaths.title, inputValues.input);
-
-                        if (inputData !== undefined && inputData !== null) {
-                            if (typeof inputData === "string") {
-                                title = inputData;
-                            } else if (typeof inputData === "object") {
-                                if (titlePathConfig?.path) {
-                                    const extracted = getNestedValue(
-                                        inputData,
-                                        titlePathConfig.path,
-                                    );
-                                    if (extracted !== undefined) {
-                                        title =
-                                            typeof extracted === "string"
-                                                ? extracted
-                                                : JSON.stringify(extracted);
-                                    }
-                                } else {
-                                    // Auto-detect common field names
-                                    title =
-                                        inputData._mapped?.title ??
-                                        inputData.title ??
-                                        inputData.name ??
-                                        JSON.stringify(inputData);
-                                }
-                            }
-                        }
+                        title =
+                            extractDynamicFieldWithSource(inputValues, dynamicFieldPaths, "title", [
+                                "title",
+                                "name",
+                            ]) ?? title;
                     }
-
-                    // Handle dynamic content from connected action node (API, Constant, etc.)
                     if (dynamicFields.content) {
-                        const contentPathConfig = getDynamicPath(dynamicFieldPaths.content);
-                        const inputData = getSourceData(
-                            dynamicFieldPaths.content,
-                            inputValues.input,
-                        );
-
-                        if (inputData !== undefined && inputData !== null) {
-                            if (typeof inputData === "string") {
-                                content = inputData;
-                            } else if (typeof inputData === "object") {
-                                if (contentPathConfig?.path) {
-                                    const extracted = getNestedValue(
-                                        inputData,
-                                        contentPathConfig.path,
-                                    );
-                                    if (extracted !== undefined) {
-                                        content =
-                                            typeof extracted === "string"
-                                                ? extracted
-                                                : JSON.stringify(extracted, null, 2);
-                                    }
-                                } else {
-                                    // Auto-detect common field names
-                                    content =
-                                        inputData._mapped?.content ??
-                                        inputData.content ??
-                                        inputData.body ??
-                                        inputData.text ??
-                                        JSON.stringify(inputData, null, 2);
-                                }
-                            }
-                        }
+                        content =
+                            extractDynamicFieldWithSource(
+                                inputValues,
+                                dynamicFieldPaths,
+                                "content",
+                                ["content", "body", "text"],
+                                true,
+                            ) ?? content;
                     }
-
-                    const requestBody = {
-                        team_id: teamId,
-                        operation: config.operation,
-                        // Only include documentId if it's a non-empty string (required for read/update, not for create)
-                        documentId:
-                            documentId && typeof documentId === "string" ? documentId : undefined,
-                        title: title,
-                        content: content,
-                        updateOperation: config.updateOperation,
-                        searchText: config.searchText,
-                        insertIndex: config.insertIndex,
-                        maxResults: config.maxResults,
-                    };
 
                     const docsResponse = await fetch("/api/workflows/actions/google-docs", {
                         method: "POST",
@@ -1506,26 +1087,33 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                             "Content-Type": "application/json",
                             Accept: "application/json",
                         },
-                        body: JSON.stringify(requestBody),
+                        body: JSON.stringify({
+                            team_id: teamId,
+                            operation: config.operation,
+                            documentId:
+                                documentId && typeof documentId === "string"
+                                    ? documentId
+                                    : undefined,
+                            title,
+                            content,
+                            updateOperation: config.updateOperation,
+                            searchText: config.searchText,
+                            insertIndex: config.insertIndex,
+                            maxResults: config.maxResults,
+                        }),
                     });
 
                     const docsData = await docsResponse.json();
 
                     if (!docsResponse.ok || !docsData.success) {
-                        console.error(
-                            "[Runner] Google Docs action failed:",
-                            docsResponse.status,
-                            docsData,
-                        );
                         if (docsData.errorCode === "DOCUMENT_NOT_FOUND") {
                             console.warn("[Runner] Document not found:", docsData.error);
                         }
-                        // For validation errors (422), show the detailed message
-                        const errorMessage =
+                        throw new Error(
                             docsData.message ||
-                            docsData.error ||
-                            "Failed to execute Google Docs action";
-                        throw new Error(errorMessage);
+                                docsData.error ||
+                                "Failed to execute Google Docs action",
+                        );
                     }
                     return { success: true, output: docsData.data };
                 }
@@ -1542,36 +1130,22 @@ export const useWorkflowRunner = (nodes, edges, setNodes, setEdges, teamId = nul
                         headers = {},
                         responseMapping = [],
                     } = config;
+                    const upperMethod = method.toUpperCase();
 
                     const response = await fetch(url, {
-                        method: method.toUpperCase(),
+                        method: upperMethod,
                         headers: {
                             "Content-Type": "application/json",
                             Accept: "application/json",
                             ...headers,
                         },
-                        body: ["POST", "PUT", "PATCH"].includes(method.toUpperCase())
+                        body: ["POST", "PUT", "PATCH"].includes(upperMethod)
                             ? JSON.stringify(requestBody)
                             : undefined,
                     });
 
                     const data = await response.json();
-
-                    // Apply responseMapping to create _mapped object for dynamic field access
-                    if (responseMapping && responseMapping.length > 0 && data) {
-                        const mapped = {};
-                        responseMapping.forEach((mapping) => {
-                            if (mapping.alias && mapping.path) {
-                                const value = getNestedValue(data, mapping.path);
-                                if (value !== undefined) {
-                                    mapped[mapping.alias] = value;
-                                }
-                            }
-                        });
-                        if (Object.keys(mapped).length > 0) {
-                            data._mapped = mapped;
-                        }
-                    }
+                    applyResponseMapping(data, responseMapping);
 
                     return { success: true, output: data };
                 }
