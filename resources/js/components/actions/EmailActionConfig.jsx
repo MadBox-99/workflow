@@ -1,6 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { OUTPUT_NODE_TYPES, getNodeTypeLabel } from "../../constants/nodeTypes";
 
-const EmailActionConfig = ({ config, onChange }) => {
+// Target field labels for email
+const TARGET_FIELD_LABELS = {
+    subject: "Subject",
+    recipients: "Recipients",
+    customData: "Custom Data",
+};
+
+const EmailActionConfig = ({ config, onChange, nodeId, nodes = [], edges = [] }) => {
+    // State declarations
     const [template, setTemplate] = useState(config.template || "");
     const [recipients, setRecipients] = useState(
         config.recipients ? config.recipients.join(", ") : "",
@@ -13,13 +22,80 @@ const EmailActionConfig = ({ config, onChange }) => {
     const [loadingTemplates, setLoadingTemplates] = useState(true);
     const [selectedTemplateVariables, setSelectedTemplateVariables] = useState(null);
 
-    // Sync local state with config prop when it changes (e.g., selecting a different node)
+    // Track initialization to prevent re-syncing when editing
+    const isInitializedRef = useRef(false);
+    const prevNodeIdRef = useRef(nodeId);
+
+    // Find connected nodes that can provide input
+    const availableInputs = useMemo(() => {
+        if (!nodeId || !edges.length || !nodes.length) return [];
+
+        const incomingEdges = edges.filter((edge) => edge.target === nodeId);
+        const inputs = [];
+
+        incomingEdges.forEach((edge) => {
+            const sourceNode = nodes.find((n) => n.id === edge.source);
+            if (!sourceNode) return;
+
+            const nodeType = sourceNode.data?.type;
+            const nodeConfig = sourceNode.data?.config || {};
+
+            // Handle Constant nodes with targetField
+            if (nodeType === "constant") {
+                const targetField = nodeConfig.targetField;
+                if (targetField) {
+                    inputs.push({
+                        nodeId: sourceNode.id,
+                        nodeLabel: sourceNode.data?.label || "Constant",
+                        nodeType: "constant",
+                        targetField,
+                        targetFieldLabel: TARGET_FIELD_LABELS[targetField] || targetField,
+                    });
+                }
+            }
+
+            // Handle action nodes that produce output (API, Calendar, etc.)
+            if (OUTPUT_NODE_TYPES.includes(nodeType)) {
+                inputs.push({
+                    nodeId: sourceNode.id,
+                    nodeLabel: sourceNode.data?.label || getNodeTypeLabel(nodeType),
+                    nodeType,
+                    targetField: "input",
+                    targetFieldLabel: getNodeTypeLabel(nodeType),
+                    isActionOutput: true,
+                });
+            }
+
+            // Handle webhookTrigger nodes
+            if (nodeType === "webhookTrigger") {
+                inputs.push({
+                    nodeId: sourceNode.id,
+                    nodeLabel: sourceNode.data?.label || "Webhook Trigger",
+                    nodeType: "webhookTrigger",
+                    targetField: "input",
+                    targetFieldLabel: "Webhook Payload",
+                    isActionOutput: true,
+                });
+            }
+        });
+
+        return inputs;
+    }, [nodeId, nodes, edges]);
+
+    // Sync local state with config prop - only on initial mount or when switching to a different node
     useEffect(() => {
+        if (isInitializedRef.current && prevNodeIdRef.current === nodeId) {
+            return;
+        }
+
+        isInitializedRef.current = true;
+        prevNodeIdRef.current = nodeId;
+
         setTemplate(config.template || "");
         setRecipients(config.recipients ? config.recipients.join(", ") : "");
         setSubject(config.subject || "");
         setCustomData(config.customData ? JSON.stringify(config.customData, null, 2) : "{}");
-    }, [config]);
+    }, [config, nodeId]);
 
     useEffect(() => {
         const fetchTemplates = async () => {
@@ -40,15 +116,18 @@ const EmailActionConfig = ({ config, onChange }) => {
         fetchTemplates();
     }, []);
 
+    // Update selected template variables when template changes
     useEffect(() => {
         const selectedTemplate = templates.find((t) => t.slug === template);
         setSelectedTemplateVariables(selectedTemplate?.variables || null);
 
+        // Auto-fill subject from template if not already set
         if (selectedTemplate && !subject) {
             setSubject(selectedTemplate.subject);
         }
-    }, [template, templates]);
+    }, [template, templates, subject]);
 
+    // Propagate changes to parent component
     useEffect(() => {
         try {
             const recipientsList = recipients
@@ -56,7 +135,7 @@ const EmailActionConfig = ({ config, onChange }) => {
                 .map((email) => email.trim())
                 .filter((email) => email.length > 0);
 
-            const parsedCustomData = customData ? JSON.parse(customData) : {};
+            const parsedCustomData = JSON.parse(customData);
 
             onChange({
                 template,
@@ -64,13 +143,39 @@ const EmailActionConfig = ({ config, onChange }) => {
                 subject,
                 customData: parsedCustomData,
             });
-        } catch (e) {
+        } catch {
             // Invalid JSON, don't update
         }
     }, [template, recipients, subject, customData]);
 
     return (
         <div className="space-y-3">
+            {/* Available Inputs Section */}
+            {availableInputs.length > 0 && (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded p-3">
+                    <p className="text-xs font-medium text-green-700 dark:text-green-300 mb-2">
+                        Elérhető dinamikus mezők:
+                    </p>
+                    <ul className="text-xs text-green-600 dark:text-green-500 space-y-1">
+                        {availableInputs.map((input) => (
+                            <li key={input.nodeId} className="flex items-center gap-2">
+                                <span className="font-medium">{input.nodeLabel}</span>
+                                <span className="text-green-500 dark:text-green-600">→</span>
+                                <code className="bg-green-100 dark:bg-green-800 px-1.5 py-0.5 rounded font-mono text-xs">
+                                    {input.isActionOutput
+                                        ? "{{{input}}} vagy {{{input.fieldName}}}"
+                                        : `{{{input.${input.targetField}}}}`}
+                                </code>
+                            </li>
+                        ))}
+                    </ul>
+                    <p className="text-xs text-green-600 dark:text-green-500 mt-2 border-t border-green-200 dark:border-green-700 pt-2">
+                        Használd ezeket a placeholdereket a Subject, Recipients vagy Custom Data
+                        mezőkben.
+                    </p>
+                </div>
+            )}
+
             <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                     Email Template
