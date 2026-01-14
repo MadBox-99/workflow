@@ -129,8 +129,9 @@ const extractDynamicField = (
     fallbackFields,
     asJson = false,
 ) => {
-    if (dynamicFieldPaths[fieldName]) {
-        const extracted = getNestedValue(inputData, dynamicFieldPaths[fieldName]);
+    const pathConfig = getDynamicPath(dynamicFieldPaths[fieldName]);
+    if (pathConfig?.path) {
+        const extracted = getNestedValue(inputData, pathConfig.path);
         if (extracted !== undefined) {
             if (typeof extracted === "string") return extracted;
             return asJson ? JSON.stringify(extracted, null, 2) : JSON.stringify(extracted);
