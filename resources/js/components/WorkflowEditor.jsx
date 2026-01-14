@@ -406,6 +406,13 @@ const WorkflowEditor = ({
         }
     }, [onGenerateToken]);
 
+    const handleSettingsSave = useCallback(async () => {
+        setIsSaving(true);
+        await saveNow(true); // Force save to include settings changes
+        setIsSaving(false);
+        setIsSettingsModalOpen(false);
+    }, [saveNow]);
+
     return (
         <div className="flex gap-4 h-[700px]">
             <WorkflowSidebar
@@ -630,6 +637,8 @@ const WorkflowEditor = ({
                 onWebhookEnabledChange={onWebhookEnabledChange}
                 onGenerateToken={handleGenerateToken}
                 isGeneratingToken={isGeneratingToken}
+                onSave={handleSettingsSave}
+                isSaving={isSaving}
             />
         </div>
     );

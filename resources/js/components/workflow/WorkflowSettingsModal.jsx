@@ -13,6 +13,8 @@ const WorkflowSettingsModal = ({
     onWebhookEnabledChange,
     onGenerateToken,
     isGeneratingToken,
+    onSave,
+    isSaving,
 }) => {
     const [copied, setCopied] = useState(false);
 
@@ -268,12 +270,34 @@ const WorkflowSettingsModal = ({
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700">
+                <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex gap-3">
                     <button
                         onClick={onClose}
-                        className="w-full px-4 py-2 text-sm font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
+                        className="flex-1 px-4 py-2 text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     >
-                        Bezárás
+                        Mégse
+                    </button>
+                    <button
+                        onClick={onSave}
+                        disabled={isSaving}
+                        className="flex-1 px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {isSaving ? (
+                            <>
+                                <svg
+                                    className="w-4 h-4 animate-spin"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                                </svg>
+                                Mentés...
+                            </>
+                        ) : (
+                            "Mentés"
+                        )}
                     </button>
                 </div>
             </div>

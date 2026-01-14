@@ -46,52 +46,55 @@ export const useAutoSave = (nodes, edges, onSave, options = {}) => {
     }, [nodes, edges, createStateHash]);
 
     // Perform the save
-    const performSave = useCallback(async () => {
-        if (!hasChanges()) {
-            setAutoSaveStatus("idle");
-            return;
-        }
-
-        setAutoSaveStatus("saving");
-
-        try {
-            const workflowData = {
-                nodes: nodes.map((node) => ({
-                    id: node.id,
-                    type: node.data.type || "action",
-                    position: node.position,
-                    data: node.data,
-                })),
-                connections: edges.map((edge) => ({
-                    id: edge.id,
-                    source: edge.source,
-                    target: edge.target,
-                    sourceHandle: edge.sourceHandle,
-                    targetHandle: edge.targetHandle,
-                })),
-            };
-
-            await onSave(workflowData);
-
-            // Update last saved data hash
-            lastSavedDataRef.current = createStateHash(nodes, edges);
-            setLastSavedAt(new Date());
-            setAutoSaveStatus("saved");
-
-            // Reset status after 2 seconds
-            setTimeout(() => {
+    const performSave = useCallback(
+        async (force = false) => {
+            if (!force && !hasChanges()) {
                 setAutoSaveStatus("idle");
-            }, 2000);
-        } catch (error) {
-            console.error("Auto-save failed:", error);
-            setAutoSaveStatus("error");
+                return;
+            }
 
-            // Reset error status after 3 seconds
-            setTimeout(() => {
-                setAutoSaveStatus("idle");
-            }, 3000);
-        }
-    }, [nodes, edges, onSave, hasChanges, createStateHash]);
+            setAutoSaveStatus("saving");
+
+            try {
+                const workflowData = {
+                    nodes: nodes.map((node) => ({
+                        id: node.id,
+                        type: node.data.type || "action",
+                        position: node.position,
+                        data: node.data,
+                    })),
+                    connections: edges.map((edge) => ({
+                        id: edge.id,
+                        source: edge.source,
+                        target: edge.target,
+                        sourceHandle: edge.sourceHandle,
+                        targetHandle: edge.targetHandle,
+                    })),
+                };
+
+                await onSave(workflowData);
+
+                // Update last saved data hash
+                lastSavedDataRef.current = createStateHash(nodes, edges);
+                setLastSavedAt(new Date());
+                setAutoSaveStatus("saved");
+
+                // Reset status after 2 seconds
+                setTimeout(() => {
+                    setAutoSaveStatus("idle");
+                }, 2000);
+            } catch (error) {
+                console.error("Auto-save failed:", error);
+                setAutoSaveStatus("error");
+
+                // Reset error status after 3 seconds
+                setTimeout(() => {
+                    setAutoSaveStatus("idle");
+                }, 3000);
+            }
+        },
+        [nodes, edges, onSave, hasChanges, createStateHash],
+    );
 
     // Debounced save effect
     useEffect(() => {
@@ -129,12 +132,15 @@ export const useAutoSave = (nodes, edges, onSave, options = {}) => {
     }, [nodes, edges, enabled, debounceMs, hasChanges, performSave, createStateHash]);
 
     // Manual save function
-    const saveNow = useCallback(async () => {
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-        }
-        await performSave();
-    }, [performSave]);
+    const saveNow = useCallback(
+        async (force = false) => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+            await performSave(force);
+        },
+        [performSave],
+    );
 
     return {
         autoSaveStatus,
