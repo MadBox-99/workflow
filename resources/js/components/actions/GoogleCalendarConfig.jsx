@@ -1,6 +1,26 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { OUTPUT_NODE_TYPES, getNodeTypeLabel } from "../../constants/nodeTypes";
 
+// Helper function to get chip styling based on path type
+const getPathChipStyle = (isSelected, type) => {
+    if (isSelected) {
+        return "bg-blue-500 border-blue-600 text-white ring-2 ring-blue-300 dark:ring-blue-700";
+    }
+
+    const typeStyles = {
+        mapped: "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:border-purple-700 dark:text-purple-400",
+        constant:
+            "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/20 dark:border-orange-700 dark:text-orange-400",
+        string: "bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-700 dark:text-green-400",
+        number: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-400",
+    };
+
+    return (
+        typeStyles[type] ||
+        "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400"
+    );
+};
+
 // Component for a field that can be static or dynamic
 const DynamicField = ({
     label,
@@ -14,37 +34,25 @@ const DynamicField = ({
     sourcePath,
     onSourcePathChange,
 }) => {
-    // Track if we've already auto-selected to prevent infinite loops
-    const hasAutoSelected = React.useRef(false);
-
-    // Ensure value is never undefined (prevents controlled/uncontrolled warning)
+    const hasAutoSelected = useRef(false);
     const safeValue = value ?? "";
 
     // Parse sourcePath which can be either a string (old format) or { nodeId, path } (new format)
     const sourceNodeId = typeof sourcePath === "object" ? sourcePath?.nodeId : null;
     const sourcePathValue = typeof sourcePath === "object" ? sourcePath?.path : sourcePath;
 
-    // Check if current value matches any available input
-    const selectedInput = availableInputs.find(
-        (input) => safeValue === `{{{input.${input.targetField}}}}`,
-    );
-
     // Auto-select if there's exactly one available input and no value is set
-    React.useEffect(() => {
+    useEffect(() => {
         if (isDynamic && availableInputs.length === 1 && !safeValue && !hasAutoSelected.current) {
             hasAutoSelected.current = true;
             onChange(`{{{input.${availableInputs[0].targetField}}}}`);
         }
-        // Reset the flag when switching back to static mode
         if (!isDynamic) {
             hasAutoSelected.current = false;
         }
-    }, [isDynamic, availableInputs.length, safeValue]);
+    }, [isDynamic, availableInputs.length, safeValue, onChange]);
 
-    // Check if there's a matching input for this field (shows indicator even in Static mode)
     const hasMatchingInput = availableInputs.length > 0;
-
-    // Check if there's an action output connected (API, Calendar, etc.)
     const hasActionOutput = availableInputs.some((input) => input.isActionOutput);
 
     // Get the currently selected source node (or first action output if none selected)
@@ -284,20 +292,7 @@ const DynamicField = ({
                                                             onClick={() =>
                                                                 handlePathChange(pathItem.path)
                                                             }
-                                                            className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border transition-all hover:scale-105 ${
-                                                                isSelected
-                                                                    ? "bg-blue-500 border-blue-600 text-white ring-2 ring-blue-300 dark:ring-blue-700"
-                                                                    : pathItem.type === "mapped"
-                                                                      ? "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:border-purple-700 dark:text-purple-400"
-                                                                      : pathItem.type === "constant"
-                                                                        ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/20 dark:border-orange-700 dark:text-orange-400"
-                                                                        : pathItem.type === "string"
-                                                                          ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-700 dark:text-green-400"
-                                                                          : pathItem.type ===
-                                                                              "number"
-                                                                            ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-400"
-                                                                            : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400"
-                                                            }`}
+                                                            className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border transition-all hover:scale-105 ${getPathChipStyle(isSelected, pathItem.type)}`}
                                                             title={pathItem.preview}
                                                         >
                                                             {isSelected && (
@@ -940,11 +935,11 @@ const GoogleCalendarConfig = ({ config, onChange, teamId, nodeId, nodes = [], ed
                         </svg>
                         <div>
                             <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                                Delete node csatlakoztatva
+                                Delete node connected
                             </p>
                             <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                                A "{connectedDeleteNode.nodeLabel}" node törli az eseményt. A törölt
-                                esemény ID-ja nem használható további műveletekhez.
+                                The "{connectedDeleteNode.nodeLabel}" node deletes the event. A
+                                deleted event ID cannot be used for subsequent operations.
                             </p>
                         </div>
                     </div>
