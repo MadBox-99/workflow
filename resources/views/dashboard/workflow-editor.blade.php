@@ -110,6 +110,8 @@
             @click="mobileMenuOpen = false"
         ></div>
 
+        @livewire('notifications')
+
         @filamentScripts
 
     </body>
