@@ -25,6 +25,17 @@ When creating a new module landing page:
 4. Import Filament CSS in app.css
 5. Follow the Hungarian content structure
 
+## Existing Modules
+
+Reference these existing implementations when creating new modules:
+
+| Module | Path | Color | Description |
+|--------|------|-------|-------------|
+| Subscriber (Main) | `~/Herd/subscriber` | Indigo #6161FF | Main subscription management portal |
+| Controlling | `~/Herd/controlling` | Emerald #10B981 | Financial controlling module |
+| CRM | `~/Herd/crm` | Blue #3B82F6 | Customer relationship management |
+| Workflow | `~/Herd/workflow` | Violet #8B5CF6 | Automation & workflow editor |
+
 ## Module Color Reference
 
 | Module | Color Name | Hex Code | Tailwind Class |

@@ -1,5 +1,23 @@
 # Module Setup Guide
 
+## Existing Modules for Reference
+
+When creating a new module, inspect these existing implementations:
+
+| Module | Path | Color |
+|--------|------|-------|
+| Subscriber (Main) | `~/Herd/subscriber` | Indigo #6161FF |
+| Controlling | `~/Herd/controlling` | Emerald #10B981 |
+| CRM | `~/Herd/crm` | Blue #3B82F6 |
+| Workflow | `~/Herd/workflow` | Violet #8B5CF6 |
+
+Key files to reference in existing modules:
+- `resources/views/components/layouts/` - Layout components
+- `resources/views/home.blade.php` - Landing page structure
+- `resources/css/app.css` - CSS configuration with Filament imports
+- `app/Filament/Pages/Auth/` - Custom auth pages
+- `app/Http/Responses/` - Custom auth responses
+
 ## Prerequisites
 
 - PHP 8.4+
